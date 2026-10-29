@@ -25,6 +25,24 @@ function log(line){if(!game)return;game.log.unshift(line);game.log=game.log.slic
 function ownerOf(h){return game.players.findIndex(s=>s.team.includes(h))}
 function field(side){return game.players[side].field.map(uid=>game.players[side].team.find(h=>h.uid===uid)).filter(h=>h && h.hp>0)}
 function bench(side){return game.players[side].team.filter(h=>h.hp>0&&!game.players[side].field.includes(h.uid))}
+// 自分のフィールドの並び順を変更する。field配列は隣接攻撃などの位置判定にも使われる。
+function reorderFieldUnits(side,fromUid,toUid){
+ if(!game||game.phase!=='acting'||selected||waiting)return false;
+ const activeSide=game.mode==='ai'?0:(game.current?.side??-1);
+ if(side!==activeSide||(game.mode==='local'&&game.current?.side!==side))return false;
+ const p=game.players[side],from=p.field.indexOf(fromUid),to=p.field.indexOf(toUid);
+ if(from<0||to<0||from===to)return false;
+ p.field.splice(from,1);p.field.splice(to,0,fromUid);
+ log(`配置変更：${side?'赤':'青'}チームのフィールド位置を変更`);
+ persist();
+ return true;
+}
+function shiftFieldUnit(side,uid,delta){
+ if(!game||!game.players?.[side])return false;
+ const p=game.players[side],from=p.field.indexOf(uid),to=from+Number(delta);
+ if(from<0||to<0||to>=p.field.length)return false;
+ return reorderFieldUnits(side,uid,p.field[to]);
+}
 function alive(side){return game.players[side].team.filter(h=>h.hp>0)}
 function others(side){return field(1-side)}
 function teammate(h){return field(ownerOf(h))}
@@ -36,7 +54,7 @@ function buildDeck(ids){let specials=[...new Set(ids.flatMap(id=>HERO_MAP[id].sk
  // 10補助カード：全種類各1枚
  cards.push(...SUPPORTS.filter(x=>x!=='市販結界装置'));if(cards.length!==60)throw Error('deck length '+cards.length);
  return shuffled(cards)}
-function makePlayer(side){let ids=config.picks[side];return {team:ids.map(id=>mkRuntime(id,side)),field:[],deck:buildDeckForSide(side,ids),discard:[],hand:[],mpMod:0,assistUsed:false,usedArmor:false,attacks:0}}
+function makePlayer(side){let ids=config.picks[side];return {team:ids.map(id=>mkRuntime(id,side)),field:[],deck:buildDeckForSide(side,ids),discard:[],hand:[],handSort:'drawn',mpMod:0,assistUsed:false,usedArmor:false,attacks:0}}
 function draw(side,n=1){let p=game.players[side];for(let i=0;i<n;i++){if(!p.deck.length){if(!p.discard.length)break;p.deck=shuffled(p.discard);p.discard=[];log(`${side?'赤':'青'}：捨て札を山札へシャッフル`)}p.hand.push(p.deck.pop())}}
 function searchDeck(side,fn){let deck=game.players[side].deck,idx=deck.findIndex(fn);if(idx<0)return false;let card=deck.splice(idx,1)[0];game.players[side].hand.push(card);game.players[side].deck=shuffled(deck);log(`${side?'赤':'青'}：山札から${card}を獲得`);return true}
 function buff(h,stat,amount,next=1){h.buffs.push({stat,amount,until:game.turn+next})}
@@ -321,4 +339,4 @@ function startAssist(side,name,target){if(waiting||game.phase!=='acting'||!game.
 function targetOfAssist(name){return ['いずみのみず','にがいお茶','つちのかたまり','かみなりのたね','かんぽうゼリー','市販結界装置'].includes(name)?'ally':'none'}
 function saveConfig(){try{localStorage.setItem('tcg_vivid_config',JSON.stringify({picks:config.picks,mode:config.mode}))}catch(e){}}
 function persist(){if(!game)return;try{localStorage.setItem(LSKEY,JSON.stringify(game))}catch(e){}}
-function restore(){try{let c=JSON.parse(localStorage.getItem('tcg_vivid_config')||'null');if(c&&c.picks?.every(p=>p.length===6))config={...config,...c};let saved=JSON.parse(localStorage.getItem(LSKEY)||'null');if(saved?.players?.length===2&&['select','acting','handoff','ended'].includes(saved.phase)){game=saved;game.pendingDeathTraits=game.pendingDeathTraits||[];for(let p of game.players)for(let h of p.team){h.usedSkills=h.usedSkills||{};h.traitUses=Number(h.traitUses||0);if(h.tauntTurn===undefined)h.tauntTurn=-1}waiting=false;game.pendingArmor=null;if(game.phase==='acting'&&game.current?.side===1&&game.mode==='ai')setTimeout(takeAiAction,550)}}catch(e){console.warn('保存データ復元失敗',e)}}
+function restore(){try{let c=JSON.parse(localStorage.getItem('tcg_vivid_config')||'null');if(c&&c.picks?.every(p=>p.length===6))config={...config,...c};let saved=JSON.parse(localStorage.getItem(LSKEY)||'null');if(saved?.players?.length===2&&['select','acting','handoff','ended'].includes(saved.phase)){game=saved;game.pendingDeathTraits=game.pendingDeathTraits||[];for(let p of game.players){p.handSort=['drawn','type','mp','name'].includes(p.handSort)?p.handSort:'drawn';for(let h of p.team){h.usedSkills=h.usedSkills||{};h.traitUses=Number(h.traitUses||0);if(h.tauntTurn===undefined)h.tauntTurn=-1}}waiting=false;game.pendingArmor=null;if(game.phase==='acting'&&game.current?.side===1&&game.mode==='ai')setTimeout(takeAiAction,550)}}catch(e){console.warn('保存データ復元失敗',e)}}

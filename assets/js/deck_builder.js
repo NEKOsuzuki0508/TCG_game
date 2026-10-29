@@ -46,7 +46,7 @@ function initDeckBuilder(){
  }catch(e){console.warn('デッキ保存の読み込み失敗',e)}
  deckDraft=deckSlots[0]?deckToCounts(deckSlots[0]):deckRecommended(config.picks[0]);
 }
-function saveDeckSlots(){try{localStorage.setItem(DECK_STORAGE_KEY,JSON.stringify(deckSlots));accountMarkDirty()}catch(e){deckNotice='ブラウザに保存できませんでした。JSONでバックアップしてください。'}}
+function saveDeckSlots(){try{localStorage.setItem(DECK_STORAGE_KEY,JSON.stringify(deckSlots))}catch(e){deckNotice='ブラウザに保存できませんでした。JSONでバックアップしてください。'}}
 function buildDeckForSide(side,ids){
  if(validateDeckArray(deckSlots[side]))return shuffled(deckSlots[side]);
  return buildDeck(ids);
@@ -112,7 +112,7 @@ function renderDeckEditor(){
  ${missing.length?`<div class="deck-warning"><b>技に必要なカードがありません：</b>${escapeHTML(missing.join('、'))}。このままでも保存できますが、該当する持ち技の発動には注意してください。</div>`:''}
  <div class="deck-layout"><div class="deck-main"><section class="panel deck-section"><div class="section-top"><div><p class="eyebrow">MANA</p><h2>MPカード</h2></div><small>1MP ≧ 2MP ≧ 3MP</small></div><div class="deck-list">${['1MP','2MP','3MP'].map(deckItem).join('')}</div></section>
  <section class="panel deck-section"><div class="section-top"><div><p class="eyebrow">SPECIAL COST</p><h2>特殊コストカード</h2></div><small>技の属性コスト</small></div><div class="deck-list">${DECK_ELEMENT_CARDS.map(deckItem).join('')}</div></section></div>
- <section class="panel deck-section"><div class="section-top"><div><p class="eyebrow">SUPPORT</p><h2>補助カード</h2></div><small>11種類から選択</small></div><div class="deck-list">${SUPPORTS.map(deckItem).join('')}</div></section></div>
+ <section class="panel deck-section"><div class="section-top"><div><p class="eyebrow">SUPPORT</p><h2>補助カード</h2></div><small>公式新版の11種類</small></div><div class="deck-list">${SUPPORTS.map(deckItem).join('')}</div></section></div>
  <section class="panel deck-save-panel"><div class="deck-save-info"><h2>${sideLabel(deckEditSide)}に適用</h2><p>「保存する」で、このチームの60枚をブラウザに保存します。現在進行中の対戦にある山札・手札は変更されません。</p><p class="muted">カスタム未登録時は、選んだキャラクターの持ち技から作ったデッキを自動使用します。</p></div><div class="deck-save-actions"><button class="primary-btn" data-act="deckSave" ${res.valid?'':'disabled'}>この60枚を保存する</button><button class="small-outline" data-act="deckCopy" ${res.valid?'':'disabled'}>もう一方のチームへコピー</button><button class="small-outline" data-act="deckReset">自動編成に戻す</button></div></section>
  <section class="panel deck-transfer"><h2>デッキをバックアップ・復元</h2><p>青・赤両方の保存デッキをJSONとして書き出せます。別のブラウザに移す場合も使用できます。</p><div class="deck-transfer-actions"><button class="small-outline" data-act="deckExport">デッキをJSONで保存</button><label class="file-button">JSONを読み込む<input type="file" accept=".json,application/json" data-act="deckImportFile" hidden></label></div></section>`;
 }
