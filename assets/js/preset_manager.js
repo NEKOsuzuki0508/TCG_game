@@ -79,7 +79,7 @@ function importNamedFormations(data){
 function renderPresetPage(){
  const edit=savedFormations.find(x=>x.id===presetEditingId);
  const list=currentPresetNames();
- return `<section class="pagehead"><p class="eyebrow">SAVED SQUADS · LOCAL / GITHUB</p><h1>マイ編成 <span>${savedFormations.length}件保存</span></h1><p>公式・非公式・追加登録したカードから好きな6人を組み合わせ、名前を付けて複数保存できます。60枚デッキも必要に応じて一緒に保存し、青・赤どちらにも呼び出せます。</p></section>
+ return `<section class="pagehead"><p class="eyebrow">SAVED SQUADS · LOCAL / GITHUB</p><h1>マイ編成 <span>${savedFormations.length}件保存</span></h1><p>基本カード・追加カード・ユーザー登録カードから好きな6人を組み合わせ、名前を付けて複数保存できます。60枚デッキも必要に応じて一緒に保存し、青・赤どちらにも呼び出せます。</p></section>
  <section class="panel preset-workspace"><div class="section-top"><div><p class="eyebrow">BUILD & SAVE</p><h2>${edit?'既存編成を更新':'現在の6人を名前付きで保存'}</h2></div></div>
  <div class="preset-sides"><button data-act="presetSide" data-side="0" class="${presetSide===0?'active':''}">青チーム</button><button data-act="presetSide" data-side="1" class="${presetSide===1?'active':''}">赤 / AIチーム</button></div>
  <div class="preset-current-roster">${(config.picks[presetSide]||[]).map(id=>`<button class="roster-mini" data-act="detail" data-id="${id}">${escapeHTML(HERO_MAP[id]?.name||`No.${id}`)}</button>`).join('')}</div>
