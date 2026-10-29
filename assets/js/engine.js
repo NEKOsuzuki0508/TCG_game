@@ -10,7 +10,7 @@ const FORMATIONS=[
 ];
 const SUPPORTS=['いずみのみず','にがいお茶','つちのかたまり','かみなりのたね','かんぽうゼリー','流れる魔力','止められた魔力','まほうの甲冑','ひらめきの一手','ヒメアオホノカ','市販結界装置'];
 const HERO_MAP=Object.fromEntries(CARD_DATA.map(c=>[c.id,c]));
-const TARG={1000:['enemy','none'],1001:['enemy','enemy'],1002:['enemy','enemy'],1003:['enemy','enemy'],1004:['enemy','enemy'],1005:['ally','enemy'],1006:['ally','enemy'],1007:['enemy','enemy'],1008:['enemy','ally'],1009:['self','enemy'],1010:['ally','ally'],1011:['enemy','enemy'],1012:['ally','ally'],1013:['enemy','ally'],1014:['enemy','ally'],1015:['ally','ally'],1016:['self','enemy'],1017:['enemy','self'],1018:['enemy','none'],1019:['enemy','enemy'],1020:['enemy','enemy'],1021:['enemy','enemy'],1022:['ally','none'],1023:['enemy','enemy'],1024:['enemy','none'],1025:['enemy','none'],1026:['enemy','enemy'],1027:['none','ally'],1028:['enemy','enemy'],1029:['enemy','ally'],1030:['enemy','ally'],1031:['enemy','ally'],1032:['enemy','enemy'],1033:['enemy','ally'],1034:['none','ally'],1035:['enemy','enemy']};
+const TARG={1000:['enemy'],1001:['enemy'],1002:['enemy'],1003:['enemy'],1004:['ally'],1005:['enemy'],1006:['enemy'],1007:['enemy'],1008:['enemy'],1009:['enemy'],1010:['ally'],1011:['enemy'],1012:['enemy'],1013:['enemy'],1014:['enemy'],1015:['enemy'],1016:['enemy'],1017:['none'],1018:['enemy'],1019:['enemy'],1020:['enemy'],1021:['enemy'],1022:['enemy'],1023:['enemy'],1024:['enemy'],1025:['enemy'],1026:['none'],1027:['enemy'],1028:['ally'],1029:['enemy'],1030:['enemy'],1031:['enemy'],1032:['enemy'],1033:['enemy'],1034:['none'],1035:['enemy']};
 const HELP={
 'いずみのみず':'味方1人のHP+30','にがいお茶':'味方1人の次の攻撃ダメージ+30','つちのかたまり':'味方1人のぼうぎょ+30（このターン）','かみなりのたね':'味方1人のすばやさ+30（このターン）','かんぽうゼリー':'味方1人の状態異常を1つ解除','流れる魔力':'このターン味方の技必要MP−1','止められた魔力':'このターン敵の技必要MP+1','まほうの甲冑':'このターン味方フィールド全員の敵攻撃を防ぐ（1戦1回）','ひらめきの一手':'手札をランダム1枚捨て、1枚引く','ヒメアオホノカ':'味方フィールド全員のHP+10（簡易裁定）','市販結界装置':'味方1人への次の攻撃を無効化。やみカードを使う攻撃は半減'};
 const AI_ACTION_DELAY_MS=1400;
@@ -455,4 +455,47 @@ function startAssist(side,name,target){if(waiting||game.phase!=='acting'||!game.
 function targetOfAssist(name){return ['いずみのみず','にがいお茶','つちのかたまり','かみなりのたね','かんぽうゼリー','市販結界装置'].includes(name)?'ally':'none'}
 function saveConfig(){try{localStorage.setItem('tcg_vivid_config',JSON.stringify({picks:config.picks,mode:config.mode}))}catch(e){}}
 function persist(){if(!game)return;try{localStorage.setItem(LSKEY,JSON.stringify(game))}catch(e){}}
-function restore(){try{let c=JSON.parse(localStorage.getItem('tcg_vivid_config')||'null');if(c&&c.picks?.every(p=>p.length===6))config={...config,...c};let saved=JSON.parse(localStorage.getItem(LSKEY)||'null');if(saved?.players?.length===2&&['select','acting','handoff','ended'].includes(saved.phase)){game=saved;game.pendingDeathTraits=game.pendingDeathTraits||[];for(let p of game.players){p.handSort=['drawn','type','mp'].includes(p.handSort)?p.handSort:'drawn';p.handSortOrder=['asc','desc'].includes(p.handSortOrder)?p.handSortOrder:'asc';for(let h of p.team){h.usedSkills=h.usedSkills||{};h.traitUses=Number(h.traitUses||0);if(h.tauntTurn===undefined)h.tauntTurn=-1;if(h.banAttackTurn===undefined)h.banAttackTurn=-1;if(h.skipNextAction===undefined)h.skipNextAction=0;if(h.combustion===undefined)h.combustion=0;if(h.turnStartHp===undefined)h.turnStartHp=h.hp;if(h.damageTakenThisTurn===undefined)h.damageTakenThisTurn=0;if(h.fukutsuUsed===undefined)h.fukutsuUsed=false;if(h.actionNameCursor===undefined)h.actionNameCursor=0;if(h.wasInFieldPreviousTurn===undefined)h.wasInFieldPreviousTurn=false}}waiting=false;game.pendingArmor=null;if(game.phase==='acting'&&game.current?.side===1&&game.mode==='ai')setTimeout(takeAiAction,AI_ACTION_DELAY_MS)}}catch(e){console.warn('保存データ復元失敗',e)}}
+function restore(){
+ try{
+  let c=JSON.parse(localStorage.getItem('tcg_vivid_config')||'null');
+  if(c&&c.picks?.every(p=>p.length===6))config={...config,...c};
+  let saved=JSON.parse(localStorage.getItem(LSKEY)||'null');
+  if(saved?.players?.length===2&&['select','acting','handoff','ended'].includes(saved.phase)){
+   game=saved;
+   game.pendingDeathTraits=game.pendingDeathTraits||[];
+   game.log=Array.isArray(game.log)?game.log:[];
+   let staleCharacterNames=false;
+   for(let p of game.players){
+    p.handSort=['drawn','type','mp'].includes(p.handSort)?p.handSort:'drawn';
+    p.handSortOrder=['asc','desc'].includes(p.handSortOrder)?p.handSortOrder:'asc';
+    for(let h of p.team){
+     const canonicalName=HERO_MAP[h.id]?.name;
+     if(canonicalName&&h.name!==canonicalName){h.name=canonicalName;staleCharacterNames=true;}
+     h.usedSkills=h.usedSkills||{};h.traitUses=Number(h.traitUses||0);
+     if(h.tauntTurn===undefined)h.tauntTurn=-1;
+     if(h.banAttackTurn===undefined)h.banAttackTurn=-1;
+     if(h.skipNextAction===undefined)h.skipNextAction=0;
+     if(h.combustion===undefined)h.combustion=0;
+     if(h.turnStartHp===undefined)h.turnStartHp=h.hp;
+     if(h.damageTakenThisTurn===undefined)h.damageTakenThisTurn=0;
+     if(h.fukutsuUsed===undefined)h.fukutsuUsed=false;
+     if(h.actionNameCursor===undefined)h.actionNameCursor=0;
+     if(h.wasInFieldPreviousTurn===undefined)h.wasInFieldPreviousTurn=false;
+    }
+   }
+   if(staleCharacterNames){
+    // 保存データに旧ID対応の名前が残っている場合、過去ログも誤表記の可能性があるため消去する。
+    game.log=[];
+    log('キャラクター名をカードIDに合わせて修正しました。旧名で記録されたログは正確性を保証できないため消去しました。');
+    const actor=game.players.flatMap(p=>p.team).find(h=>h.uid===game.actionBanner?.actorUid);
+    if(actor)game.actionBanner.actorName=actor.name;
+    if(game.actionBanner)game.actionBanner.resultLines=game.log.slice(0,6).reverse();
+    if(game.pendingArmor?.uid){const target=game.players.flatMap(p=>p.team).find(h=>h.uid===game.pendingArmor.uid);if(target)game.pendingArmor.name=target.name;}
+    if(game.pendingSacrifice?.candidates)game.pendingSacrifice.candidates=game.pendingSacrifice.candidates.map(c=>{const h=game.players.flatMap(p=>p.team).find(x=>x.uid===c.uid);return h?{...c,name:h.name}:c;});
+   }
+   waiting=false;game.pendingArmor=null;
+   if(staleCharacterNames)persist();
+   if(game.phase==='acting'&&game.current?.side===1&&game.mode==='ai')setTimeout(takeAiAction,AI_ACTION_DELAY_MS);
+  }
+ }catch(e){console.warn('保存データ復元失敗',e)}
+}
