@@ -127,3 +127,14 @@
 
 .field-reorder-hint{margin:0 0 8px;text-align:center;color:#87b9ca;font-size:10px;line-height:1.5}
 @media(max-width:700px){.field-reorder-hint{font-size:9px}}
+
+/* 技名・効果・実際の処理結果を対戦フィールドに表示 */
+.action-banner{margin:10px 0 14px;padding:13px 16px;border:1px solid #3f657b;border-radius:13px;background:linear-gradient(135deg,rgba(15,39,58,.98),rgba(15,29,46,.98));box-shadow:0 8px 22px rgba(0,0,0,.2);color:#e9f7ff}
+.action-banner-blue{border-left:4px solid #72dce8}
+.action-banner-red{border-left:4px solid #ff9b8b}
+.action-banner-top{display:flex;justify-content:space-between;gap:10px;color:#a7c6d9;font-size:10px;font-weight:850;letter-spacing:.04em}
+.action-banner h3{font-size:17px;line-height:1.4;margin:7px 0 5px;color:#f2fbff}
+.action-banner-effect{font-size:12px;line-height:1.8;margin:0;color:#c9dce8;overflow-wrap:anywhere}
+.action-banner-results{display:grid;gap:3px;margin:9px 0 0;padding:8px 0 0 17px;border-top:1px solid rgba(140,180,200,.22);font-size:11px;line-height:1.65;color:#aee9d7}
+.action-banner-results li{overflow-wrap:anywhere}
+@media(max-width:700px){.action-banner{padding:11px 12px;margin:8px 0 11px}.action-banner h3{font-size:15px}.action-banner-effect{font-size:11px}.action-banner-results{font-size:10px}}
