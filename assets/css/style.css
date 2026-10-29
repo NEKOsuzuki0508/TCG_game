@@ -105,3 +105,25 @@
 /* 手動発動できるとくせい */
 .trait-activation-row{display:flex;flex-wrap:wrap;align-items:center;gap:.55rem;margin:0 0 1rem;padding:.8rem 1rem;border:1px solid var(--line, #334155);border-radius:14px;background:rgba(15,23,42,.45)}
 .trait-activation-row>b{flex-basis:100%;font-size:.82rem;color:var(--muted, #94a3b8)}
+
+
+/* 対戦中のフィールド並べ替え・手札ソート */
+.field-slot{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
+.field-slot>.unit{width:100%;height:100%;flex:1}
+.field-slot-reorderable{cursor:grab;touch-action:pan-y}
+.field-slot-reorderable .unit{cursor:grab}
+.field-slot.is-dragging{opacity:.48}
+.field-slot.drop-target>.unit{outline:2px dashed #7be5f0;outline-offset:2px}
+.field-order-controls{display:flex;align-items:center;justify-content:center;gap:5px;min-height:30px}
+.field-order-controls span{font-size:10px;color:#86a7bb;white-space:nowrap}
+.field-order-controls button{border:1px solid #42657b;background:#17384d;color:#dffaff;border-radius:7px;padding:5px 8px;font-size:10px;font-weight:800;white-space:nowrap}
+.field-order-controls button:not(:disabled):hover{background:#245b6e;border-color:#7be5f0}
+.field-order-controls button:disabled{opacity:.3}
+.hand-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.hand-toolbar>span{font-size:11px;color:#7698af}
+.hand-toolbar label{display:flex;align-items:center;gap:7px;font-size:11px;color:#a8c7d8;font-weight:800;white-space:nowrap}
+.hand-toolbar select{max-width:150px;border:1px solid #41657c;border-radius:8px;background:#122a3d;color:#e9f8ff;padding:7px 9px;font-size:11px}
+@media(max-width:700px){.field-order-controls{gap:3px}.field-order-controls button{padding:5px 4px;font-size:9px}.field-order-controls span{font-size:9px}.hand-panel .boxheading{align-items:flex-start;flex-direction:column}.hand-toolbar{width:100%;justify-content:space-between;gap:8px}.hand-toolbar select{max-width:135px}.field-slot>.unit{min-height:205px}}
+
+.field-reorder-hint{margin:0 0 8px;text-align:center;color:#87b9ca;font-size:10px;line-height:1.5}
+@media(max-width:700px){.field-reorder-hint{font-size:9px}}
