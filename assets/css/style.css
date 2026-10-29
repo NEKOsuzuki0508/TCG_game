@@ -123,7 +123,7 @@
 .hand-toolbar>span{font-size:11px;color:#7698af}
 .hand-toolbar label{display:flex;align-items:center;gap:7px;font-size:11px;color:#a8c7d8;font-weight:800;white-space:nowrap}
 .hand-toolbar select{max-width:150px;border:1px solid #41657c;border-radius:8px;background:#122a3d;color:#e9f8ff;padding:7px 9px;font-size:11px}
-@media(max-width:700px){.field-order-controls{gap:3px}.field-order-controls button{padding:5px 4px;font-size:9px}.field-order-controls span{font-size:9px}.hand-panel .boxheading{align-items:flex-start;flex-direction:column}.hand-toolbar{width:100%;justify-content:space-between;gap:8px}.hand-toolbar select{max-width:135px}.field-slot>.unit{min-height:205px}}
+@media(max-width:700px){.field-order-controls{gap:3px}.field-order-controls button{padding:5px 4px;font-size:9px}.field-order-controls span{font-size:9px}.hand-panel .boxheading{align-items:flex-start;flex-direction:column}.hand-toolbar{width:100%;justify-content:space-between;gap:8px}.hand-toolbar select{max-width:125px}.field-slot>.unit{min-height:205px}}
 
 .field-reorder-hint{margin:0 0 8px;text-align:center;color:#87b9ca;font-size:10px;line-height:1.5}
 @media(max-width:700px){.field-reorder-hint{font-size:9px}}
