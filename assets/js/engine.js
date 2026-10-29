@@ -24,7 +24,7 @@ const roll=p=>Math.random()<p;
 const shuffled=a=>{let r=a.slice();for(let i=r.length-1;i>0;i--){const k=rand(i+1);[r[i],r[k]]=[r[k],r[i]]}return r};
 let config={mode:'ai',picks:[FORMATIONS[0].ids.slice(),FORMATIONS[4].ids.slice()],activeSide:0,view:'battle',showDetails:null,editorSide:null};
 let game=null;let selected=null;let waiting=false;let lastOutcome='';let armoredResolver=null;let sacrificeResolver=null;
-const LSKEY='tcg_vivid_state_v1';
+const LSKEY='tcg_vivid_state_v2';
 function log(line){if(!game)return;game.log.unshift(line);game.log=game.log.slice(0,110)}
 function ownerOf(h){return game.players.findIndex(s=>s.team.includes(h))}
 function field(side){return game.players[side].field.map(uid=>game.players[side].team.find(h=>h.uid===uid)).filter(h=>h && h.hp>0)}
@@ -61,10 +61,10 @@ function buildDeck(ids){let specials=[...new Set(ids.flatMap(id=>HERO_MAP[id].sk
 function makePlayer(side){let ids=config.picks[side];return {team:ids.map(id=>mkRuntime(id,side)),field:[],deck:buildDeckForSide(side,ids),discard:[],hand:[],handSort:'drawn',mpMod:0,assistUsed:false,usedArmor:false,attacks:0}}
 function draw(side,n=1){let p=game.players[side];for(let i=0;i<n;i++){if(!p.deck.length){if(!p.discard.length)break;p.deck=shuffled(p.discard);p.discard=[];log(`${side?'赤':'青'}：捨て札を山札へシャッフル`)}p.hand.push(p.deck.pop())}}
 function searchDeck(side,fn){let deck=game.players[side].deck,idx=deck.findIndex(fn);if(idx<0)return false;let card=deck.splice(idx,1)[0];game.players[side].hand.push(card);game.players[side].deck=shuffled(deck);log(`${side?'赤':'青'}：山札から${card}を獲得`);return true}
-function buff(h,stat,amount,next=1){h.buffs.push({stat,amount,until:game.turn+next})}
+function buff(h,stat,amount,next=1){h.buffs.push({stat,amount,until:game.turn+next});if(amount<0&&typeof sourceOnDebuff==='function')sourceOnDebuff(h)}
 function stat(h,s){let b=s==='attack'?h.baseA:s==='defense'?h.baseD:h.baseS;b+=h.buffs.filter(x=>x.stat===s&&x.until>=game.turn).reduce((a,x)=>a+x.amount,0);
- if(s==='speed'){if(h.armor.light)b+=10;if(h.armor.heavy)b-=10;if(h.id===1004&&others(ownerOf(h)).some(e=>e.marks))b+=10;if(h.id===1028&&others(ownerOf(h)).some(e=>e.burn))b+=10}
- if(s==='defense'&&h.id===1029&&others(ownerOf(h)).some(e=>e.burn))b+=10;
+ if(s==='speed'){if(h.armor.light)b+=10;if(h.armor.heavy)b-=10}
+ if(s==='defense'&&h.id===1029&&others(ownerOf(h)).some(e=>e.combustion))b+=10;
  if(typeof sourceStatBonus==='function')b+=(sourceStatBonus(h,s)||0);
  if(s==='attack')b+=officialTraitAttackBonus(h);
  if(s==='defense')b+=officialTraitDefenseBonus(h);
@@ -77,10 +77,10 @@ function mostWounded(side){return field(side).slice().sort((a,b)=>(b.maxHp-b.hp)
 function enemyAdjacent(t){let f=field(ownerOf(t)),i=f.findIndex(h=>h.uid===t.uid);return [f[i-1],f[i+1]].filter(Boolean)}
 function heal(h,n){if(!h||h.hp<=0)return;let prev=h.hp;h.hp=Math.min(h.maxHp,h.hp+n);if(h.hp>prev)log(`＋ ${h.name} HP ${prev} → ${h.hp}`)}
 function armorAdd(h,kind){if(!h||h.hp<=0)return;if(!h.armor[kind]){h.armor[kind]=true;log(`◇ ${h.name}：${kind==='light'?'軽甲':'重甲'}を装着`)}}
-function magnet(h,n=1){if(!h||h.hp<=0)return;for(let i=0;i<n;i++){if(h.marks<3){h.marks++;log(`⚡ ${h.name}に磁気波動（${h.marks}/3）`)}else{directDamage(null,h,10,'磁気波動の超過',false)}}}
-function burst(h,n,initiator=null,neighbors=null){if(!h||h.hp<=0)return;let amt=Math.min(h.marks,n||h.marks);h.marks-=amt;if(amt){log(`⚡ ${h.name}の磁気波動${amt}枚が炸裂`);directDamage(null,h,10*amt,'磁気波動の炸裂',false);if(typeof sourceOnMagnet==='function')sourceOnMagnet(h,'burst',initiator,neighbors)}}
+function magnet(h,n=1,skillOrigin=true){if(!h||h.hp<=0)return;let count=n;if(skillOrigin&&typeof hasField==='function'&&hasField(1-ownerOf(h),1002)&&roll(.5)){count++;log('ルネ「蒼雷華」：磁気波動を1枚追加');}for(let i=0;i<count;i++){if(h.marks<3){h.marks++;log(`⚡ ${h.name}に磁気波動（${h.marks}/3）`)}else{const side=1-ownerOf(h),bonus=((typeof hasField==='function'&&hasField(side,1001))?5:0)+((typeof hasField==='function'&&hasField(side,1010))?5:0);directDamage(null,h,15+bonus,'磁気波動の超過',false)}}}
+function burst(h,n,initiator=null,neighbors=null){if(!h||h.hp<=0)return;let amt=Math.min(h.marks,n||h.marks);h.marks-=amt;if(amt){const adjacent=(neighbors||enemyAdjacent(h).slice());const side=1-ownerOf(h),bonus=((typeof hasField==='function'&&hasField(side,1001))?5:0)+((typeof hasField==='function'&&hasField(side,1010))?5:0);log(`⚡ ${h.name}の磁気波動${amt}枚が炸裂`);directDamage(null,h,(10+bonus)*amt,'磁気波動の炸裂',false);if(typeof sourceOnMagnet==='function')sourceOnMagnet(h,'burst',initiator,adjacent)}}
 function ailment(h,kind){if(!h||h.hp<=0)return;if(kind==='burn'||kind==='poison'){h[kind]++;log(`状態異常：${h.name}に${kind==='burn'?'やけど':'どく'} ${h[kind]}`)}else if(kind==='charm'){h.charm=Math.max(1,h.charm||0);log(`状態異常：${h.name}にみりょう`)}else{h[kind]=Math.max(h[kind],kind==='sleep'?2:3);log(`状態異常：${h.name}に${kind==='sleep'?'ねむり':'こんらん'}`)}if(typeof sourceOnDebuff==='function')sourceOnDebuff(h)}
-function cure(h){for(let k of ['sleep','burn','poison','confusion','charm'])if(h[k]>0){h[k]=k==='sleep'?0:h[k]-1;log(`治療：${h.name}の状態異常を1つ解除`);let healers=field(ownerOf(h)).filter(x=>x.id===1022);for(let x of healers){if(!x.flags.cure){x.flags.cure=true;heal(h,10)}}return true}return false}
+function cure(h){for(let k of ['sleep','burn','poison','confusion','charm'])if(h[k]>0){h[k]=k==='sleep'?0:h[k]-1;log(`治療：${h.name}の状態異常を1つ解除`);return true}return false}
 function nextShield(h,n){h.nextIn.push(n)}
 function extraAttack(h,n){h.nextOut.push(n)}
 function wasAttacked(h){return (h.flags.attackedTurn||0)===game.turn}
@@ -96,16 +96,10 @@ function selectableTraitAtAction(h){return selectableTrait(h)&&!/ターン開始
 function activeTaunts(side){return field(1-side).filter(x=>x.tauntTurn===game.turn)}
 function forceTauntTarget(src,target){if(!src||!target||!game||ownerOf(target)===ownerOf(src))return target;let forced=activeTaunts(ownerOf(src));if(!forced.length||forced.some(x=>x.uid===target.uid))return target;let picked=forced.length===1?forced[0]:forced[rand(forced.length)];log(`みがわり：${picked.name}が敵の攻撃対象を引き受けた`);return picked}
 function validEnemyTarget(side,target){let forced=activeTaunts(side);return !forced.length||forced.some(x=>x.uid===target.uid)}
-function tryRedirect(src,target){let side=ownerOf(target);for(let body of field(side)){if(body.uid===target.uid)continue;let chance=0;if(body.id===1009)chance=.5;else if(body.id===1016&&body.armor.heavy)chance=.3;else if(body.id===1005&&src.marks>0)chance=.3;else if(HERO_MAP[body.id]?.traitName==='せいかん')chance=.25;if(chance&&((HERO_MAP[body.id]?.traitName==='せいかん'&&roll(chance))||(HERO_MAP[body.id]?.traitName!=='せいかん'&&claim(body,'redirect')&&roll(chance)))){log(`防御：${body.name}が${target.name}への攻撃を引き受けた`);return body}}return target}
+function tryRedirect(src,target,options={}){if(options.normal)return target;let side=ownerOf(target);for(let body of field(side)){if(body.uid===target.uid)continue;let chance=0;if(body.id===1009)chance=.3;else if(HERO_MAP[body.id]?.traitName==='せいかん')chance=.25;if(chance&&((HERO_MAP[body.id]?.traitName==='せいかん'&&roll(chance))||(HERO_MAP[body.id]?.traitName!=='せいかん'&&claim(body,'redirect')&&roll(chance)))){log(`防御：${body.name}が${target.name}への攻撃を引き受けた`);return body}}return target}
 function rawAttackBonus(actor,target,side){let b=0;
- if(actor.id===1001&&target.marks)b+=10;
- if(actor.id===1011&&game.counterThisTurn[side])b+=10;
- if(actor.id===1020&&weakened(target))b+=10;
- if(actor.id===1021&&target.poison)b+=10;
- if(actor.id===1023&&sickness(target)&&statDebuff(target))b+=20;
- if(actor.id===1035&&game.players[side].attacks>=2)b+=10;
  if(traitNameOf(actor)==='ほのおのとうし'&&actor.lastAttackedTurn===game.turn-1)b+=10;
- for(let h of field(side)){if(h.id===1019&&weakened(target))b+=10;if(h.id===1025&&target.burn)b+=10;if(h.id===1031&&game.players[side].attacks>=1)b+=10;
+ for(let h of field(side)){
   const tn=HERO_MAP[h.id]?.traitName||'';if(tn==='ふくつのしれいとう'&&h.hp>0&&h.hp<=h.maxHp/2)b+=10;if(tn==='たよれるしれいとう'&&h.hp>h.maxHp/2)b+=10}
  b-=actor.burn*10;
  if(actor.nextOut.length)b+=actor.nextOut.shift();
@@ -124,10 +118,7 @@ function rawAttackBonus(actor,target,side){let b=0;
  if(target&&traitNameOf(actor)==='エイプリルフール'&&!actor.wasInFieldPreviousTurn&&actor.enteredTurn===game.turn)b+=stat(target,'attack')-stat(actor,'attack');
  if(target&&traitNameOf(actor)==='タレビン'&&(game.lastSkillSpecial||[]).includes('水')&&(game.currentSkillSpecial||[]).includes('水'))b+=10;
  return b}
-function onArmorSpent(victim,kind){let side=ownerOf(victim);for(let h of field(side)){
- if(h.id===1013&&claim(h,'armorSpent')){let m=mostWounded(side)||h;extraAttack(m,kind==='heavy'?20:10);log(`装甲反照：${m.name}の次の攻撃を強化`)}
- if(h.id===1015&&claim(h,'repaired'))heal(victim,kind==='heavy'?20:10)
- }}
+function onArmorSpent(victim,kind){}
 function queueDeathTrait(h){let c=HERO_MAP[h.id];if(!c||!(/死んだとき|HPが0以下になったとき/.test(c.trait||'')))return;if(!game.pendingDeathTraits)game.pendingDeathTraits=[];game.pendingDeathTraits.push({actorUid:h.uid,skillName:'死亡時とくせい：'+c.traitName,description:c.trait,targetUid:game.players[ownerOf(h)].team.find(x=>x.hp>0)?.uid||game.players[1-ownerOf(h)].team.find(x=>x.hp>0)?.uid||null,consumeAction:false,deathTrigger:true});log(`死亡時効果：${h.name}「${c.traitName}」の処理待ち`)}
 function triggerDeathTrait(h){if(h.deathProcessed)return;h.deathProcessed=true;let c=HERO_MAP[h.id];if(!c)return;if(c.traitName==='やみへのさそい'){let side=ownerOf(h),names=new Set((c.skills||[]).map(x=>x.name));let targets=field(1-side).filter(x=>x.hp>0&&(HERO_MAP[x.id]?.skills||[]).some(sk=>names.has(sk.name)));if(targets.length){let target=targets[rand(targets.length)];log(`死亡時効果：${h.name}「やみへのさそい」→ 共通の技を持つ${target.name}を道連れにする`);updateHp(target,-target.hp)}else log(`死亡時効果：${h.name}「やみへのさそい」対象なし`);return}queueDeathTrait(h)}
 function updateHp(h,val){if(!h||!game)return;let wasAlive=h.hp>0,oldHp=h.hp;h.hp=Math.max(0,Math.min(h.maxHp,h.hp+val));if(val<0&&wasAlive){h.damageTakenThisTurn=(h.damageTakenThisTurn||0)+Math.min(oldHp,-val);const trait=HERO_MAP[h.id]?.traitName;if(trait==='ふくつのこころ'&&!h.fukutsuUsed&&h.turnStartHp>0&&h.hp<h.turnStartHp/2){h.fukutsuUsed=true;const recovery=Math.floor((h.damageTakenThisTurn||0)/2);if(recovery>0){const before=h.hp;h.hp=Math.min(h.maxHp,h.hp+recovery);log(`とくせい：${h.name}「ふくつのこころ」HP ${before} → ${h.hp}（このターンの被ダメージの半分を回復）`)}}}if(wasAlive&&h.hp===0){for(let p of game.players)p.field=p.field.filter(u=>u!==h.uid);log(`退場：${h.name}が墓場へ`);triggerDeathTrait(h)}}
@@ -145,7 +136,7 @@ function estimateAttackBonus(actor,target,side){let next=actor.nextOut.slice();l
 async function maybeUseLifeline(actor,target,power,bonusTrue,options,side){if(!actor||!target||ownerOf(actor)===ownerOf(target)||target.shieldTurn===game.turn)return target;let victimSide=ownerOf(target);let candidates=field(victimSide).filter(h=>h.uid!==target.uid&&HERO_MAP[h.id]?.traitName==='きせきのきずな'&&Number(h.traitUses||0)===0&&!traitExhausted(h));if(!candidates.length)return target;let attackPower=power+estimateAttackBonus(actor,target,side),defensePower=stat(target,'defense');let predicted=options.trueOnly?bonusTrue:(attackPower<=defensePower?10:attackPower-defensePower)+bonusTrue;if(target.hp-predicted>target.maxHp*.1)return target;if(game.mode==='ai'&&victimSide===1){let rescue=candidates[0];rescue.traitUses=1;log(`とくせい：${rescue.name}「きせきのきずな」で${target.name}への攻撃を引き受けた`);return rescue}return await new Promise(resolve=>{sacrificeResolver=resolve;game.pendingSacrifice={victimUid:target.uid,attackerUid:actor.uid,candidates:candidates.map(h=>({uid:h.uid,name:h.name})),predicted};render()}).then(uid=>{if(!uid)return target;let rescue=candidates.find(h=>h.uid===uid);if(!rescue)return target;rescue.traitUses=1;log(`とくせい：${rescue.name}「きせきのきずな」で${target.name}への攻撃を引き受けた`);return rescue})}
 async function damage(actor,target,power,bonusTrue=0,options={}){
  if(!target||target.hp<=0)return 0;let side=ownerOf(actor);let originalTarget=target;let taunts=target&&ownerOf(target)!==side?activeTaunts(side):[];
- if(taunts.length){if(!taunts.some(x=>x.uid===target.uid))target=forceTauntTarget(actor,target)}else if(options.redirect!==false)target=tryRedirect(actor,target);
+ if(taunts.length){if(!taunts.some(x=>x.uid===target.uid))target=forceTauntTarget(actor,target)}else if(options.redirect!==false)target=tryRedirect(actor,target,options);
  if(!target||target.hp<=0)return 0;target=await maybeUseLifeline(actor,target,power,bonusTrue,options,side);if(!target||target.hp<=0)return 0;
  if(ownerOf(actor)!==ownerOf(target)&&((game.currentSkillSpecial||[]).includes('やみ')&&traitNameOf(target)==='もんばん'||(game.currentSkillSpecial||[]).includes('水')&&traitNameOf(target)==='地に足うまってる')){log(`とくせい：${target.name}が属性カードの攻撃効果を無効化`);return 0}
  let bonus=rawAttackBonus(actor,target,side);
@@ -155,6 +146,7 @@ async function damage(actor,target,power,bonusTrue=0,options={}){
  const minimumHit=!options.trueOnly && attackPower<=defensePower;
  let base=options.trueOnly?0:(minimumHit?10:attackPower-defensePower);
  if(minimumHit)log(`最低ダメージ保証：${actor.name}の攻撃威力${attackPower} ≦ ${target.name}のぼうぎょ${defensePower} → 確定10ダメージ（完全無効化以外は軽減後も保証）`);
+ if(typeof sourceExtraTrue==='function')bonusTrue+=sourceExtraTrue(actor,target,side,bonusTrue)||0;
  let amount=base+bonusTrue; if(options.trueOnly)amount=bonusTrue;
  game.players[side].attacks++;
  // 「確定10」は最終的な最低保証。ぼうぎょ以外の数値軽減でも0にはならない。
@@ -188,29 +180,17 @@ async function damage(actor,target,power,bonusTrue=0,options={}){
    if(typeof sourceOnHit==='function')sourceOnHit(actor,target,amount,options);
    officialTraitOnHit(actor,target,amount,options);
    // 攻撃から派生する被弾・反撃を処理（追撃が反撃を再誘発しない）
-   for(let h of field(ownerOf(target))){
-     if(h.id===1006&&claim(h,'shielded_'+target.uid))buff(target,'defense',10,1);
-     if(h.id===1010&&claim(h,'aid'))heal(target,10);
-   }
    if(target.flags.counterReady){target.flags.counterReady=false;counter(target,actor,20,'反撃の準備')}
-   for(let h of field(ownerOf(target)))if(h.id===1007&&claim(h,'counter'))counter(h,actor,20,'応報の刃');
-   if(actor.id===1018)buff(target,'attack',-10,1);
- }
+   }
  // 多段追撃の実行（ここでのダメージは攻撃回数に含めない）
- if(options.normal&&amount>0){
-   if(actor.id===1002){} // ミヤは後述の味方通常攻撃誘発で実行
-   if(actor.id===1014&&actor.armor.light&&claim(actor,'scatter')){let a=enemyAdjacent(target);if(a.length)directDamage(actor,a[0],15,'機動射角',true)}
-   for(let h of field(side))if(h.id===1002&&claim(h,'magNormal')&&roll(.5))magnet(target,1);
- }
+
  if(options.normal&&typeof sourceAfterNormal==='function')sourceAfterNormal(actor,target);
  if(typeof sourceAfterAttack==='function')sourceAfterAttack(actor,target,amount,options);officialTraitAfterAttack(actor,target,options);
- if(game.players[side].attacks>=2){for(let h of field(side))if(h.id===1034&&claim(h,'comboHeal'))heal(mostWounded(side),10)}
  if(target.hp===0||originalTarget.hp===0)checkVictory();
  return amount;
 }
-function counter(h,enemy,amount,name){if(!enemy||enemy.hp<=0)return;let dmg=amount; game.counterThisTurn[ownerOf(h)]++;
- log(`反撃：${h.name}「${name}」`);directDamage(h,enemy,dmg,name,false);
- for(let x of field(ownerOf(h)))if(x.id===1008&&claim(x,'counterPursuit'))directDamage(x,enemy,10,'仕返しの照準',false)}
+function counter(h,enemy,amount,name){if(!enemy||enemy.hp<=0)return;let dmg=amount+((typeof hasField==='function'&&hasField(ownerOf(h),1010))?5:0); game.counterThisTurn[ownerOf(h)]++;
+ log(`反撃：${h.name}「${name}」`);directDamage(h,enemy,dmg,name,false)}
 function frontSkillCost(side,skill){let p=game.players[side];return Math.max(0,skill.cost+p.mpMod)}
 function getPayment(side,skill){let hand=game.players[side].hand,usedSpecial=[];for(let sp of skill.special){let idx=hand.findIndex((v,i)=>!usedSpecial.includes(i)&&v===sp+'カード');if(idx===-1)return null;usedSpecial.push(idx)}
  let need=frontSkillCost(side,skill);
@@ -228,9 +208,6 @@ function finish(winner){game.phase='ended';game.winner=winner;selected=null;log(
 function startMatch(){game={mode:config.mode,phase:'select',turn:0,players:[makePlayer(0),makePlayer(1)],log:[],counterThisTurn:[0,0],planned:[null,null],currentSelectSide:0,order:[],current:null,winner:null,pendingArmor:null,pendingDeathTraits:[],actionNameCharLog:[],lastSkillSpecial:[],lastSkillNameBySide:[],lastSpecialUsedBySide:[[],[]]};
  for(let side=0;side<2;side++){if(validateDeckArray(deckSlots[side]))log(`${side?'赤':'青'}：保存済みの60枚カスタムデッキを使用`);draw(side,5);}
  for(let side=0;side<2;side++)for(let h of game.players[side].team){let tr=HERO_MAP[h.id]?.traitEffect;if(tr==='opening_draw')draw(side,1);if(tr==='opening_armor')game.players[side].team.forEach(a=>{a.armor.light=true;a.armor.heavy=true})}
- // 「バトル開始時」はベンチを含む全員へ適用。アイリスが初期編成にいれば発動。
- for(let side=0;side<2;side++)if(game.players[side].team.some(h=>h.id===1012)){
-  game.players[side].team.forEach(h=>{h.armor.light=true;h.armor.heavy=true});log(`${side?'赤':'青'}：アイリス「二層防衛」味方6人全員に軽甲・重甲を配備`)}
  if(typeof sourceStartMatch==='function')sourceStartMatch();
  beginRound();config.view='battle';render()}
 function beginRound(){if(checkVictory())return;game.turn++;game.phase='select';game.planned=[null,null];game.currentSelectSide=0;game.current=null;selected=null;dropRoundFlags();for(let p of game.players)for(let h of p.team){h.turnStartHp=h.hp;h.damageTakenThisTurn=0;h.acted=false}for(let side=0;side<2;side++)draw(side,2);if(typeof sourceTurnStart==='function')sourceTurnStart();officialTraitTurnStart();if(game.phase==='ended')return;log(`━━ ターン${game.turn} 開始：各プレイヤー2枚ドロー`);persist()}
@@ -240,9 +217,9 @@ function commitSelection(side,uidList){if(!uidList||uidList.length<1||uidList.le
  else {passPending=game.mode==='local';beginTurn()}}
 function pickAiLineup(side){let p=game.players[side];let prev=p.field, c=alive(side).slice();let forced=c.filter(h=>h.tauntTurn===game.turn);let ranked=c.sort((a,b)=>((prev.includes(b.uid)?20:0)+b.hp/8+stat(b,'speed')/3)-((prev.includes(a.uid)?20:0)+a.hp/8+stat(a,'speed')/3));return [...forced,...ranked.filter(h=>!forced.some(x=>x.uid===h.uid))].slice(0,3).map(h=>h.uid)}
 function onEnter(h){const firstEntry=!h.entered;h.entered=true;h.enteredTurn=game.turn;let side=ownerOf(h);let tr=HERO_MAP[h.id]?.traitEffect;
- if(typeof sourceOnEnter==='function')sourceOnEnter(h);officialTraitOnEnter(h);
+ if(typeof sourceOnEnter==='function')sourceOnEnter(h,firstEntry);officialTraitOnEnter(h);
  if(firstEntry&&tr==='enter_draw')draw(side,1);if(firstEntry&&tr==='enter_shield')field(side).forEach(a=>nextShield(a,20));if(firstEntry&&tr==='enter_heal')field(side).forEach(a=>heal(a,10));
- if(typeof RESTORED_IDS!=='undefined'&&RESTORED_IDS.has(h.id))return;
+ if((typeof RESTORED_IDS!=='undefined'&&RESTORED_IDS.has(h.id))||(h.id>=1000&&h.id<=1035))return;
  switch(h.id){case 1000:for(let x of field(side))nextShield(x,20);log('ルネ：制御装甲、味方の次の被ダメージ−20');break;case 1003:searchDeck(side,c=>/^[123]MP$/.test(c));break;case 1024:for(let x of field(side))nextShield(x,20);log('ノルシュ：灼熱防空が発動');break;case 1026:h.nextHalf++;log('ルチル：次の被攻撃を半減');break;case 1030:for(let x of field(side))nextShield(x,20);log('フローリア：風の編制が発動');break;case 1033:draw(side,1);log('シエンラ：機動通信で1枚引く');break;}
 }
 function officialTraitFormation(side){const f=field(side);if(f.length!==3)return;for(const h of f){const tn=traitNameOf(h);if(tn==='じつはリーダー')for(const x of f)buff(x,'defense',10,0);if(tn==='じつはサブリーダー')for(const x of f)buff(x,'attack',10,0);if(tn==='じつはむしょく'&&!h.officialMaxHpBoosted){for(const x of f){x.maxHp+=10;x.hp=Math.min(x.maxHp,x.hp+10)}h.officialMaxHpBoosted=true;log('とくせい「じつはむしょく」：味方全員の最大HP＋10')}}}
@@ -255,7 +232,7 @@ function nextActor(){if(game.phase==='ended')return;if(checkVictory())return;let
  const maximum=Math.max(...all.map(a=>stat(a.unit,'speed'))),high=all.filter(a=>stat(a.unit,'speed')===maximum);let chosen=high[rand(high.length)];
  let h=chosen.unit,s=chosen.side;
  if(h.skipNextAction>0){h.skipNextAction--;h.acted=true;log(`${h.name}は効果により行動できない`);return nextActor()}
- if(h.combustion>0){h.combustion=0;directDamage(null,h,10,'燃焼の継続ダメージ',false);if(h.hp<=0){h.acted=true;if(processDeathQueue())return;return nextActor()}}
+ if(h.combustion>0){h.combustion=0;if(typeof sourceOnCombustion==='function')sourceOnCombustion(h);directDamage(null,h,10,'燃焼の継続ダメージ',false);if(h.hp<=0){h.acted=true;if(processDeathQueue())return;return nextActor()}}
  if(h.sleep&&traitNameOf(h)==='そろそろ起きなきゃ')h.sleep=Math.max(0,h.sleep-1);else if(h.sleep){h.sleep=Math.max(0,h.sleep-1);h.acted=true;log(`${h.name}はねむりで行動できない`);return nextActor()}
  if(h.poison&& !roll(Math.pow(.9,h.poison))){h.acted=true;log(`${h.name}の行動はどくで失敗`);return nextActor()}
  officialTraitAtAction(h);if(game.phase==='ended')return;
@@ -281,7 +258,7 @@ async function takeAiAction(){if(!game||game.phase!=='acting'||!game.current||ga
 async function actNormal(h,target){if(waiting||!target||h.hp<=0)return;if(h.banAttackTurn===game.turn){log(`${h.name}は攻撃制限中のため通常攻撃できない`);endAction(h);return}waiting=true;selected=null;let s=ownerOf(h);game.actionBanner={side:s,actorUid:h.uid,actorName:h.name,skillName:'通常攻撃',description:'コスト不要。こうげき値と相手のぼうぎょ値をもとにダメージを計算します。',status:'発動中',resultLines:[]};log(`${s?'赤':'青'} ${h.name}：通常攻撃`);game.actionNameCharLog=game.actionNameCharLog||[];game.actionNameCharLog.push({side:s,length:kanaCount('通常攻撃')});render();persist();await pause(ACTION_REVEAL_DELAY_MS);
  const normalHit=async()=>{let count=(h.id>=1030&&h.id<=1035)||HERO_MAP[h.id]?.traitEffect==='triple35'?3:1,power=count===3?Math.round(stat(h,'attack')*.35/10)*10:stat(h,'attack');
  for(let i=0;i<count;i++){if(target.hp<=0)break;await damage(h,target,power,0,{normal:true,name:'通常攻撃 '+(count>1?`${i+1}/${count}`:'')});if(game.phase==='ended')break}}
- await normalHit();if(h.id===1032&&claim(h,'extraNormal')&&roll(.4)&&target.hp>0&&game.phase!=='ended'){log('ビスコット：飛翔の連打が追加発動');await normalHit()}
+ await normalHit();if(h.id===1032&&claim(h,'extraNormal')&&roll(.3)&&target.hp>0&&game.phase!=='ended'){log('ビスコット：飛翔の連打が追加発動');await normalHit()}
  if(game.actionBanner?.actorUid===h.uid){game.actionBanner.status='処理完了';game.actionBanner.resultLines=game.log.slice(0,5).reverse();render();persist();await pause(ACTION_RESULT_DELAY_MS)}waiting=false;endAction(h)}
 async function actSkill(h,index,target){if(waiting||h.hp<=0)return;let side=ownerOf(h),skill=HERO_MAP[h.id].skills[index],payment=getPayment(side,skill);if(!payment){alert('必要なMP・属性カードが手札にありません。');return}
  if(skillExhausted(h,skill,index)){alert('この技はゲーム中の使用回数上限に達しています。');return}
@@ -302,7 +279,7 @@ function rememberLastSkillUse(side,skill){game.lastSkillSpecial=skill?.special||
 function processDeathQueue(){if(!game||game.phase==='ended'||game.manualPending||!game.pendingDeathTraits?.length)return false;game.manualPending=game.pendingDeathTraits.shift();log('死亡時効果を手動裁定で処理：'+game.manualPending.skillName);render();persist();return true}
 function activateTrait(h){if(!game||!h||h.hp<=0||!selectableTrait(h)||traitExhausted(h))return;let c=HERO_MAP[h.id];h.traitUses=Number(h.traitUses||0)+1;game.actionBanner={side:ownerOf(h),actorUid:h.uid,actorName:h.name,skillName:'とくせい：'+c.traitName,description:c.trait,status:'発動中',resultLines:[]};game.actionNameCharLog=game.actionNameCharLog||[];game.actionNameCharLog.push({side:ownerOf(h),length:kanaCount(c.traitName)});log(`${h.name}：とくせい「${c.traitName}」を発動宣言`);if(h.id===2){for(let ally of field(ownerOf(h))){let old=ally.hp;ally.hp=Math.max(ally.hp,Math.ceil(ally.maxHp/2));if(ally.hp>old)log(`とくせい：${ally.name} HP ${old} → ${ally.hp}`)}game.actionBanner.status='処理完了';game.actionBanner.resultLines=game.log.slice(0,6).reverse();render();persist();return}if(h.id===5){if(game.phase!=='select'||!game.players[ownerOf(h)].field.includes(h.uid)){h.traitUses=Math.max(0,h.traitUses-1);alert('「いそぎのようじ」はターン開始時、フィールドにいる場合のみ発動できます。');return}game.players[ownerOf(h)].field=[];if(typeof plannedChoices!=='undefined')plannedChoices=[];log('いそぎのようじ：フィールドの仲間全員をベンチへ戻した');game.actionBanner.status='処理完了';game.actionBanner.resultLines=game.log.slice(0,6).reverse();render();persist();return}game.manualPending={actorUid:h.uid,skillName:'とくせい：'+c.traitName,description:c.trait,targetUid:field(ownerOf(h))[0]?.uid||game.players[ownerOf(h)].team.find(x=>x.hp>0)?.uid||null,consumeAction:c.traitName==='やまぶし',traitActivation:true,resumePhase:game.phase};if(game.actionBanner)game.actionBanner.status='手動処理待ち';render();persist()}
 function endAction(h){if(!game||game.phase==='ended'){render();persist();return}h.acted=true;h.actionNameCursor=(game.actionNameCharLog||[]).length;if(typeof sourceOnEndAction==='function')sourceOnEndAction(h);
- if(h.marks>0){let n=h.marks;h.marks=0;directDamage(null,h,n*10,'磁気波動の行動後炸裂',false)}
+ if(h.marks>0)burst(h);
  game.currentSkillSpecial=[];
  if(h.banSkills>0){h.banSkills=0} // 技封印は次の行動順終了で解除
  if(processDeathQueue())return;if(!checkVictory())nextActor();render();persist()}
@@ -315,6 +292,7 @@ function canAttack(h){return !!h&&h.hp>0}
 async function skillEffect(h,i,t){let s=ownerOf(h),f=field(s),en=field(1-s),id=h.id,shot=async(p,bonus=0)=>{if(t&&t.hp>0)await doHit(h,t,p,bonus,HERO_MAP[id].skills[i].name)};
  if(id<=91)return await executeImportedSkill(h,i,t);
  if(typeof restoredSkillEffect==='function'&&typeof RESTORED_IDS!=='undefined'&&RESTORED_IDS.has(id))return await restoredSkillEffect(h,i,t);
+ if(id>=1000&&id<=1035)return sourceManualSkill(h,i,t);
  if(!TARG[id])return await executeImportedSkill(h,i,t);
  switch(id){
  case 1000: if(i===0){await shot(60);magnet(t)}else f.forEach(x=>buff(x,'defense',10,1));break;

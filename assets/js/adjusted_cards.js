@@ -23,7 +23,8 @@ function sourceStartMatch(){
   }
  }
 }
-function sourceOnEnter(h){
+function sourceOnEnter(h,firstEntry=true){
+ if(!firstEntry)return;
  const side=ownerOf(h);
  if([1002,1006,1012,1018,1024,1030].includes(h.id))searchDeck(side,c=>/^[123]MP$/.test(c));
  if([1006,1024,1030].includes(h.id)){
@@ -107,7 +108,7 @@ function sourceOnDebuff(target){
 function sourceGiveCombustion(target){
  if(!target||target.hp<=0||target.combustion)return false;
  if(((game.currentSkillSpecial||[]).includes('やみ')&&traitNameOf(target)==='もんばん')||((game.currentSkillSpecial||[]).includes('水')&&traitNameOf(target)==='地に足うまってる'))return false;
- target.combustion=1;log(`${target.name}：燃焼を付与（次の行動直前に確定10）`);sourceOnDebuff(target);if(typeof sourceOnCombustion==='function')sourceOnCombustion(target);return true;
+ target.combustion=1;log(`${target.name}：燃焼を付与（次の行動直前に確定10）`);sourceOnDebuff(target);return true;
 }
 function sourceOnCombustion(target){
  const side=1-ownerOf(target);
