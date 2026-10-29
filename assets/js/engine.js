@@ -1,4 +1,4 @@
-/* 売ってないTCG ブラウザ対戦エンジン */
+/* 売ってないTCG / ブラウザ対戦エンジン */
 'use strict';
 const FORMATIONS=[
   {key:'mag',name:'陸軍｜磁気波動',ids:[1000,1001,1002,1003,1004,1005],color:'#77e9e5'},
@@ -453,7 +453,7 @@ function startAssist(side,name,target){if(waiting||game.phase!=='acting'||!game.
  switch(name){case 'いずみのみず':heal(target,30);break;case 'にがいお茶':extraAttack(target,30);break;case 'つちのかたまり':buff(target,'defense',30,0);break;case 'かみなりのたね':buff(target,'speed',30,0);break;case 'かんぽうゼリー':cure(target);break;case '流れる魔力':p.mpMod-=1;break;case '止められた魔力':game.players[1-side].mpMod+=1;break;case 'まほうの甲冑':p.usedArmor=true;field(side).forEach(x=>x.shieldTurn=game.turn);break;case 'ひらめきの一手':if(p.hand.length){let j=rand(p.hand.length);p.discard.push(...p.hand.splice(j,1))}draw(side);break;case 'ヒメアオホノカ':field(side).forEach(h=>heal(h,10));break;case '市販結界装置':target.nextBarrier=(target.nextBarrier||0)+1;log(`${target.name}に市販結界装置を設置`);break;}
  render();persist()}
 function targetOfAssist(name){return ['いずみのみず','にがいお茶','つちのかたまり','かみなりのたね','かんぽうゼリー','市販結界装置'].includes(name)?'ally':'none'}
-function saveConfig(){try{localStorage.setItem('tcg_vivid_config',JSON.stringify({picks:config.picks,mode:config.mode}))}catch(e){}}
+function saveConfig(){try{localStorage.setItem('tcg_vivid_config',JSON.stringify({picks:config.picks,mode:config.mode}))}catch(e){}if(typeof accountMarkDirty==='function')accountMarkDirty()}
 function persist(){if(!game)return;try{localStorage.setItem(LSKEY,JSON.stringify(game))}catch(e){}}
 function restore(){
  try{

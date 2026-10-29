@@ -46,7 +46,7 @@ function initDeckBuilder(){
  }catch(e){console.warn('デッキ保存の読み込み失敗',e)}
  deckDraft=deckSlots[0]?deckToCounts(deckSlots[0]):deckRecommended(config.picks[0]);
 }
-function saveDeckSlots(){try{localStorage.setItem(DECK_STORAGE_KEY,JSON.stringify(deckSlots))}catch(e){deckNotice='ブラウザに保存できませんでした。JSONでバックアップしてください。'}}
+function saveDeckSlots(){try{localStorage.setItem(DECK_STORAGE_KEY,JSON.stringify(deckSlots))}catch(e){deckNotice='ブラウザに保存できませんでした。JSONでバックアップしてください。'}if(typeof accountMarkDirty==='function')accountMarkDirty()}
 function buildDeckForSide(side,ids){
  if(validateDeckArray(deckSlots[side]))return shuffled(deckSlots[side]);
  return buildDeck(ids);
