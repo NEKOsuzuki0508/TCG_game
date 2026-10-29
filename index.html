@@ -105,6 +105,28 @@
 /* 手動発動できるとくせい */
 .trait-activation-row{display:flex;flex-wrap:wrap;align-items:center;gap:.55rem;margin:0 0 1rem;padding:.8rem 1rem;border:1px solid var(--line, #334155);border-radius:14px;background:rgba(15,23,42,.45)}
 .trait-activation-row>b{flex-basis:100%;font-size:.82rem;color:var(--muted, #94a3b8)}
+
+
+/* 対戦中のフィールド並べ替え・手札ソート */
+.field-slot{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
+.field-slot>.unit{width:100%;height:100%;flex:1}
+.field-slot-reorderable{cursor:grab;touch-action:pan-y}
+.field-slot-reorderable .unit{cursor:grab}
+.field-slot.is-dragging{opacity:.48}
+.field-slot.drop-target>.unit{outline:2px dashed #7be5f0;outline-offset:2px}
+.field-order-controls{display:flex;align-items:center;justify-content:center;gap:5px;min-height:30px}
+.field-order-controls span{font-size:10px;color:#86a7bb;white-space:nowrap}
+.field-order-controls button{border:1px solid #42657b;background:#17384d;color:#dffaff;border-radius:7px;padding:5px 8px;font-size:10px;font-weight:800;white-space:nowrap}
+.field-order-controls button:not(:disabled):hover{background:#245b6e;border-color:#7be5f0}
+.field-order-controls button:disabled{opacity:.3}
+.hand-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.hand-toolbar>span{font-size:11px;color:#7698af}
+.hand-toolbar label{display:flex;align-items:center;gap:7px;font-size:11px;color:#a8c7d8;font-weight:800;white-space:nowrap}
+.hand-toolbar select{max-width:150px;border:1px solid #41657c;border-radius:8px;background:#122a3d;color:#e9f8ff;padding:7px 9px;font-size:11px}
+@media(max-width:700px){.field-order-controls{gap:3px}.field-order-controls button{padding:5px 4px;font-size:9px}.field-order-controls span{font-size:9px}.hand-panel .boxheading{align-items:flex-start;flex-direction:column}.hand-toolbar{width:100%;justify-content:space-between;gap:8px}.hand-toolbar select{max-width:135px}.field-slot>.unit{min-height:205px}}
+
+.field-reorder-hint{margin:0 0 8px;text-align:center;color:#87b9ca;font-size:10px;line-height:1.5}
+@media(max-width:700px){.field-reorder-hint{font-size:9px}}
 </style></head><body><div id="app"></div><script>let CARD_DATA=[
   {
     "id": 1000,
@@ -6137,6 +6159,24 @@ function log(line){if(!game)return;game.log.unshift(line);game.log=game.log.slic
 function ownerOf(h){return game.players.findIndex(s=>s.team.includes(h))}
 function field(side){return game.players[side].field.map(uid=>game.players[side].team.find(h=>h.uid===uid)).filter(h=>h && h.hp>0)}
 function bench(side){return game.players[side].team.filter(h=>h.hp>0&&!game.players[side].field.includes(h.uid))}
+// 自分のフィールドの並び順を変更する。field配列は隣接攻撃などの位置判定にも使われる。
+function reorderFieldUnits(side,fromUid,toUid){
+ if(!game||game.phase!=='acting'||selected||waiting)return false;
+ const activeSide=game.mode==='ai'?0:(game.current?.side??-1);
+ if(side!==activeSide||(game.mode==='local'&&game.current?.side!==side))return false;
+ const p=game.players[side],from=p.field.indexOf(fromUid),to=p.field.indexOf(toUid);
+ if(from<0||to<0||from===to)return false;
+ p.field.splice(from,1);p.field.splice(to,0,fromUid);
+ log(`配置変更：${side?'赤':'青'}チームのフィールド位置を変更`);
+ persist();
+ return true;
+}
+function shiftFieldUnit(side,uid,delta){
+ if(!game||!game.players?.[side])return false;
+ const p=game.players[side],from=p.field.indexOf(uid),to=from+Number(delta);
+ if(from<0||to<0||to>=p.field.length)return false;
+ return reorderFieldUnits(side,uid,p.field[to]);
+}
 function alive(side){return game.players[side].team.filter(h=>h.hp>0)}
 function others(side){return field(1-side)}
 function teammate(h){return field(ownerOf(h))}
@@ -6148,7 +6188,7 @@ function buildDeck(ids){let specials=[...new Set(ids.flatMap(id=>HERO_MAP[id].sk
  // 10補助カード：全種類各1枚
  cards.push(...SUPPORTS.filter(x=>x!=='市販結界装置'));if(cards.length!==60)throw Error('deck length '+cards.length);
  return shuffled(cards)}
-function makePlayer(side){let ids=config.picks[side];return {team:ids.map(id=>mkRuntime(id,side)),field:[],deck:buildDeckForSide(side,ids),discard:[],hand:[],mpMod:0,assistUsed:false,usedArmor:false,attacks:0}}
+function makePlayer(side){let ids=config.picks[side];return {team:ids.map(id=>mkRuntime(id,side)),field:[],deck:buildDeckForSide(side,ids),discard:[],hand:[],handSort:'drawn',mpMod:0,assistUsed:false,usedArmor:false,attacks:0}}
 function draw(side,n=1){let p=game.players[side];for(let i=0;i<n;i++){if(!p.deck.length){if(!p.discard.length)break;p.deck=shuffled(p.discard);p.discard=[];log(`${side?'赤':'青'}：捨て札を山札へシャッフル`)}p.hand.push(p.deck.pop())}}
 function searchDeck(side,fn){let deck=game.players[side].deck,idx=deck.findIndex(fn);if(idx<0)return false;let card=deck.splice(idx,1)[0];game.players[side].hand.push(card);game.players[side].deck=shuffled(deck);log(`${side?'赤':'青'}：山札から${card}を獲得`);return true}
 function buff(h,stat,amount,next=1){h.buffs.push({stat,amount,until:game.turn+next})}
@@ -6433,7 +6473,7 @@ function startAssist(side,name,target){if(waiting||game.phase!=='acting'||!game.
 function targetOfAssist(name){return ['いずみのみず','にがいお茶','つちのかたまり','かみなりのたね','かんぽうゼリー','市販結界装置'].includes(name)?'ally':'none'}
 function saveConfig(){try{localStorage.setItem('tcg_vivid_config',JSON.stringify({picks:config.picks,mode:config.mode}))}catch(e){}}
 function persist(){if(!game)return;try{localStorage.setItem(LSKEY,JSON.stringify(game))}catch(e){}}
-function restore(){try{let c=JSON.parse(localStorage.getItem('tcg_vivid_config')||'null');if(c&&c.picks?.every(p=>p.length===6))config={...config,...c};let saved=JSON.parse(localStorage.getItem(LSKEY)||'null');if(saved?.players?.length===2&&['select','acting','handoff','ended'].includes(saved.phase)){game=saved;game.pendingDeathTraits=game.pendingDeathTraits||[];for(let p of game.players)for(let h of p.team){h.usedSkills=h.usedSkills||{};h.traitUses=Number(h.traitUses||0);if(h.tauntTurn===undefined)h.tauntTurn=-1}waiting=false;game.pendingArmor=null;if(game.phase==='acting'&&game.current?.side===1&&game.mode==='ai')setTimeout(takeAiAction,550)}}catch(e){console.warn('保存データ復元失敗',e)}}
+function restore(){try{let c=JSON.parse(localStorage.getItem('tcg_vivid_config')||'null');if(c&&c.picks?.every(p=>p.length===6))config={...config,...c};let saved=JSON.parse(localStorage.getItem(LSKEY)||'null');if(saved?.players?.length===2&&['select','acting','handoff','ended'].includes(saved.phase)){game=saved;game.pendingDeathTraits=game.pendingDeathTraits||[];for(let p of game.players){p.handSort=['drawn','type','mp','name'].includes(p.handSort)?p.handSort:'drawn';for(let h of p.team){h.usedSkills=h.usedSkills||{};h.traitUses=Number(h.traitUses||0);if(h.tauntTurn===undefined)h.tauntTurn=-1}}waiting=false;game.pendingArmor=null;if(game.phase==='acting'&&game.current?.side===1&&game.mode==='ai')setTimeout(takeAiAction,550)}}catch(e){console.warn('保存データ復元失敗',e)}}
 </script><script>/* コスト・補助カード60枚の編成。キャラクター6人のチーム編成とは別に管理する。 */
 'use strict';
 const DECK_STORAGE_KEY='tcg_vivid_decks_v1';
@@ -6705,7 +6745,7 @@ async function performGithubSync(action){
  }catch(e){cloudNotice='エラー：'+e.message}
  finally{token='';cloudBusy=false;render()}
 }
-</script><script>let plannedChoices=[],passPending=false,prevViewSide=null,queryText='',heroFilter='all';
+</script><script>let plannedChoices=[],passPending=false,prevViewSide=null,queryText='',heroFilter='all',fieldDragUid=null,fieldDragSide=null;
 function sideLabel(s){return s===0?'青チーム':'赤チーム'}
 function statBadge(h){return `<span>HP <b>${h.hp}/${h.maxHp}</b></span><span>攻 <b>${stat(h,'attack')}</b></span><span>防 <b>${stat(h,'defense')}</b></span><span>速 <b>${stat(h,'speed')}</b></span>`}
 function badges(h){let r=[];if(h.tauntTurn>=game.turn)r.push('<span class="mini-tag status">みがわり</span>');if(h.armor.light)r.push('<span class="mini-tag armorLight">軽甲</span>');if(h.armor.heavy)r.push('<span class="mini-tag armorHeavy">重甲</span>');if(h.marks)r.push(`<span class="mini-tag mark">磁気 ${h.marks}</span>`);if(h.burn)r.push(`<span class="mini-tag fire">やけど ${h.burn}</span>`);if(h.poison)r.push(`<span class="mini-tag poison">どく ${h.poison}</span>`);if(h.charm)r.push('<span class="mini-tag status">みりょう</span>');if(h.sleep)r.push(`<span class="mini-tag sleep">ねむり ${h.sleep}</span>`);if(h.banSkills)r.push(`<span class="mini-tag status">技封印</span>`);if(h.buffs.some(b=>b.amount<0&&b.until>=game.turn))r.push(`<span class="mini-tag status">弱体</span>`);return r.join('')}
@@ -6741,20 +6781,27 @@ function renderSelection(){let side=game.currentSelectSide;if(!plannedChoices.le
  <div class="notice"><strong>${sideLabel(side)}の配置</strong><p>HPが残っているキャラクターを1～3人選択してください。両者の配置決定後、ターン開始の状態異常処理と行動順の決定が行われます。</p></div>${traitButtons?`<div class="trait-activation-row"><b>発動タイミングを選べるとくせい</b>${traitButtons}</div>`:''}
  <div class="selection-grid">${team.map(h=>`<div class="pick-wrap">${battleTile(h,side,'field')}<button class="pick-button ${plannedChoices.includes(h.uid)?'selected':''}" ${h.hp===0?'disabled':''} data-act="pick" data-uid="${h.uid}">${plannedChoices.includes(h.uid)?'✓ 出場':'＋ 出場させる'}</button></div>`).join('')}</div><div class="select-actions"><span>出場予定 <b>${plannedChoices.length}/3</b></span><button class="primary-btn" data-act="confirmLineup" ${!plannedChoices.length?'disabled':''}>この3人で確定 →</button></div>`}
 function handCount(side){let p=game.players[side];return `<span>手札 ${p.hand.length}枚</span><span>山札 ${p.deck.length}枚</span><span>捨て札 ${p.discard.length}枚</span>`}
-function renderBattle(){let side=game.mode==='ai'?0:(game.current?.side??0),enemy=1-side;let h=game.current?.side===side?game.players[side].team.find(x=>x.uid===game.current?.uid):null;let f0=field(side),f1=field(enemy);
+function canReorderField(side){return !!game&&game.phase==='acting'&&!selected&&!waiting&&(game.mode==='ai'?side===0:game.current?.side===side)}
+function renderFieldSlot(h,side,index,count,enabled){
+ const controls=enabled?`<div class="field-order-controls" aria-label="${escapeHTML(h.name)}の位置変更"><button type="button" data-act="moveField" data-side="${side}" data-uid="${h.uid}" data-dir="-1" aria-label="左へ移動" ${index===0?'disabled':''}>← 左</button><span>${index+1} / ${count}</span><button type="button" data-act="moveField" data-side="${side}" data-uid="${h.uid}" data-dir="1" aria-label="右へ移動" ${index===count-1?'disabled':''}>右 →</button></div>`:'';
+ return `<div class="field-slot ${enabled?'field-slot-reorderable':''}" data-field-slot="${h.uid}" data-field-side="${side}" draggable="${enabled?'true':'false'}">${battleTile(h,side)}${controls}</div>`
+}
+function handCardGroup(card){if(/^\d+MP$/.test(card))return 0;if(!SUPPORTS.includes(card)&&String(card).endsWith('カード'))return 1;if(SUPPORTS.includes(card))return 2;return 3}
+function sortedHand(hand,sort){const items=hand.map((card,index)=>({card,index}));if(sort==='type')items.sort((a,b)=>handCardGroup(a.card)-handCardGroup(b.card)||a.card.localeCompare(b.card,'ja')||a.index-b.index);else if(sort==='mp')items.sort((a,b)=>{const am=a.card.match(/^(\d+)MP$/),bm=b.card.match(/^(\d+)MP$/);const ag=am?0:handCardGroup(a.card)+1,bg=bm?0:handCardGroup(b.card)+1;return ag-bg||(am&&bm?Number(am[1])-Number(bm[1]):a.card.localeCompare(b.card,'ja'))||a.index-b.index});else if(sort==='name')items.sort((a,b)=>a.card.localeCompare(b.card,'ja')||a.index-b.index);return items}
+function renderBattle(){let side=game.mode==='ai'?0:(game.current?.side??0),enemy=1-side;let h=game.current?.side===side?game.players[side].team.find(x=>x.uid===game.current?.uid):null;let f0=field(side),f1=field(enemy),reorderEnabled=canReorderField(side);
  let overlay=game.pendingArmor?`<div class="veil high"><div class="modal defense-dialog"><p class="eyebrow">DEFENCE DECISION</p><h2>${escapeHTML(game.pendingArmor.name)}の装甲を選択</h2><p>受ける予定のダメージ：<b>${game.pendingArmor.damage}</b></p><div class="armor-options"><button data-act="armor" data-kind="light"><b>軽甲を消費</b><span>−15ダメージ</span><small>すばやさ補正+10も解除</small></button><button data-act="armor" data-kind="heavy"><b>重甲を消費</b><span>−35ダメージ</span><small>すばやさ補正−10も解除</small></button></div></div></div>`:'';
  let sacrificeOverlay=game.pendingSacrifice?`<div class="veil high"><section class="modal defense-dialog"><p class="eyebrow">TRAIT RESPONSE</p><h2>「きせきのきずな」を発動しますか？</h2><p>${sideLabel(game.players.flatMap(p=>p.team).find(x=>x.uid===game.pendingSacrifice.victimUid)?.side??0)}の対象が瀕死になる見込みです。発動するキャラクターを選ぶと、その攻撃を引き受けます。</p><div class="armor-options">${game.pendingSacrifice.candidates.map(x=>`<button data-act="sacrifice" data-uid="${x.uid}"><b>${escapeHTML(x.name)}</b><span>攻撃を引き受ける</span></button>`).join('')}<button data-act="sacrifice" data-uid=""><b>発動しない</b><span>元の対象に攻撃を続ける</span></button></div></section></div>`:'';
  let htm=`<div class="battle-topbar"><div><p class="eyebrow">TACTICAL BATTLE · TURN ${game.turn}</p><h2>${sideLabel(side)}が行動中</h2></div><span class="turnbadge">第${game.turn}ターン</span></div>
  <div class="board-area"><div class="board-heading enemy"><div><small>OPPONENT</small><h3>${sideLabel(enemy)}</h3></div><span>${handCount(enemy)}</span></div><div class="battle-row enemy-row">${f1.length?f1.map(x=>battleTile(x,enemy)).join(''):'<div class="no-units">フィールドに生存者なし</div>'}${Array.from({length:Math.max(0,3-f1.length)},()=>'<div class="empty-slot">EMPTY</div>').join('')}</div>
- <div class="middle-strip"><span>▼ 戦闘エリア ▼</span><span>すばやさ順・1人ずつ行動</span></div>
- <div class="battle-row friendly-row">${f0.map(x=>battleTile(x,side)).join('')}${Array.from({length:Math.max(0,3-f0.length)},()=>'<div class="empty-slot">EMPTY</div>').join('')}</div><div class="board-heading friendly"><div><small>CURRENT PLAYER</small><h3>${sideLabel(side)}</h3></div><span>${handCount(side)}</span></div>
+ <div class="middle-strip"><span>▼ 戦闘エリア ▼</span><span>すばやさ順・1人ずつ行動</span></div>${reorderEnabled?'<p class="field-reorder-hint">自分のフィールド：カードをドラッグして並べ替えできます（スマホは左右ボタン）</p>':''}
+ <div class="battle-row friendly-row">${f0.map((x,i)=>renderFieldSlot(x,side,i,f0.length,reorderEnabled)).join('')}${Array.from({length:Math.max(0,3-f0.length)},()=>'<div class="empty-slot">EMPTY</div>').join('')}</div><div class="board-heading friendly"><div><small>CURRENT PLAYER</small><h3>${sideLabel(side)}</h3></div><span>${handCount(side)}</span></div>
  </div>
  <div class="underboard"><div class="bench-box"><div class="boxheading"><h3>ベンチ</h3><span>次のターンに交代可能</span></div><div class="bench-list">${bench(side).map(x=>`<span data-act="detail" data-id="${x.id}">${escapeHTML(x.name)} <small>HP ${x.hp}</small></span>`).join('')||'<em>待機者なし</em>'}</div><div class="boxheading grave"><h3>墓場</h3><span>${game.players[side].team.filter(x=>x.hp<=0).map(x=>escapeHTML(x.name)).join('、')||'なし'}</span></div></div>
  <div class="action-box"><div class="boxheading"><h3>${h?'行動：'+escapeHTML(h.name):'相手の行動を処理中'}</h3><span>攻撃回数 ${game.players[side].attacks}</span></div>
  ${selected?`<div class="choose-target">${escapeHTML(selected.label)}：<strong>${selected.targetType==='enemy'?'上側の敵':'下側の味方'}をクリックして対象を指定してください</strong><button data-act="cancelTarget">取消</button></div>`:''}
  <div class="action-row"><button class="attack-btn" data-act="chooseNormal" ${!h||waiting?'disabled':''}><b>通常攻撃</b><small>${h&&((h.id>=1030&&h.id<=1035)||HERO_MAP[h.id]?.traitEffect==='triple35')?'35% × 3回':'MP不要 / 単体'}</small></button>${h?HERO_MAP[h.id].skills.map((sk,i)=>{let exhausted=skillExhausted(h,sk,i),avail=!!getPayment(side,sk)&&!h.banSkills&&!exhausted;return `<button class="skill-btn" data-act="chooseSkill" data-skill="${i}" ${avail&&!waiting?'':'disabled'}><b>${escapeHTML(sk.name)}</b><small>${escapeHTML(sk.costText||(`${sk.cost}MP${sk.special?.length?' + '+sk.special.map(x=>String(x).replace(/カード$/,'')+'カード').join(' + '):''}`))} ${exhausted?'· 使用済み':avail?'':'· コスト不足'}</small></button>`}).join(''):''}</div><div class="pass-line">${h&&selectableTraitAtAction(h)&&!traitExhausted(h)?`<button data-act="activateTrait" data-uid="${h.uid}" ${waiting?'disabled':''}>とくせい「${escapeHTML(HERO_MAP[h.id].traitName)}」を発動</button>`:''}<button data-act="openManualTools" ${!h||waiting?'disabled':''}>HP・状態異常などを手動調整</button><button data-act="passAction" ${!h||waiting?'disabled':''}>このキャラクターは行動しない（パス）</button></div>
  </div></div>
- <div class="hand-panel"><div class="boxheading"><h3>あなたの手札</h3><span>補助 ${game.players[side].assistUsed?'使用済み':'1枚使用可能'} / ターン</span></div><div class="hand-list">${game.players[side].hand.map((c,i)=>{let support=SUPPORTS.includes(c),disabled=game.players[side].assistUsed||waiting||game.current?.side!==side||(c==='まほうの甲冑'&&game.players[side].usedArmor);return `<button class="hand-card ${support?'support-card':'cost-card'}" ${support&&!disabled?`data-act="chooseAssist" data-name="${escapeHTML(c)}"`:''} ${support&&disabled?'disabled':''}><span>${support?'補助':'コスト'}</span><b>${escapeHTML(c)}</b>${support?`<small>${escapeHTML(HELP[c])}</small>`:`<small>${c.includes('MP')?'技の支払いに使用':'属性カード'}</small>`}</button>`}).join('')||'<div class="no-units">手札がありません</div>'}</div><p class="hand-footnote">技を選ぶと必要なコストカードが手札から自動選択・消費されます。補助カードは1ターンに1枚使用できます。</p></div>
+ <div class="hand-panel"><div class="boxheading"><h3>あなたの手札</h3><div class="hand-toolbar"><span>補助 ${game.players[side].assistUsed?'使用済み':'1枚使用可能'} / ターン</span><label>並べ替え <select data-act="handSort" data-side="${side}" aria-label="手札の並べ替え"><option value="drawn" ${game.players[side].handSort==='drawn'?'selected':''}>引いた順</option><option value="type" ${game.players[side].handSort==='type'?'selected':''}>種類別</option><option value="mp" ${game.players[side].handSort==='mp'?'selected':''}>MP順</option><option value="name" ${game.players[side].handSort==='name'?'selected':''}>名前順</option></select></label></div></div><div class="hand-list">${sortedHand(game.players[side].hand,game.players[side].handSort||'drawn').map(({card:c})=>{let support=SUPPORTS.includes(c),disabled=game.players[side].assistUsed||waiting||game.current?.side!==side||(c==='まほうの甲冑'&&game.players[side].usedArmor);return `<button class="hand-card ${support?'support-card':'cost-card'}" ${support&&!disabled?`data-act="chooseAssist" data-name="${escapeHTML(c)}"`:''} ${support&&disabled?'disabled':''}><span>${support?'補助':'コスト'}</span><b>${escapeHTML(c)}</b>${support?`<small>${escapeHTML(HELP[c])}</small>`:`<small>${c.includes('MP')?'技の支払いに使用':'属性カード'}</small>`}</button>`}).join('')||'<div class="no-units">手札がありません</div>'}</div><p class="hand-footnote">手札の並べ替えは表示順のみを変更します。技の支払い・カードの消費順には影響しません。補助カードは1ターンに1枚使用できます。</p></div>
  <div class="log-panel"><div class="boxheading"><h3>対戦ログ</h3><span>最新30件</span></div><div class="log-list">${game.log.slice(0,30).map(v=>`<p>${escapeHTML(v)}</p>`).join('')}</div></div>`;
  return htm+overlay+(passPending&&game.mode==='local'&&!game.pendingArmor?`<div class="veil high"><div class="modal handoff-modal"><span class="handoff-icon">⇄</span><p class="eyebrow">PASS THE DEVICE</p><h2>${sideLabel(side)}の番です</h2><p>端末を次のプレイヤーに渡してから表示してください。手札は次のプレイヤーだけが確認できます。</p><button class="primary-btn" data-act="resume">手札を表示して続ける</button></div></div>`:'')+sacrificeOverlay}
 function renderVictory(){let win=game.winner;return `<section class="victory"><p class="eyebrow">MATCH COMPLETE</p><div class="victory-icon">${win===0?'◇':win===1?'◆':'＝'}</div><h1>${win<0?'引き分け':sideLabel(win)+'の勝利'}</h1><p>ターン${game.turn}で決着。両軍の行動は対戦ログから確認できます。</p><div class="victory-actions"><button class="primary-btn" data-act="again">同じ編成でもう一戦</button><button class="line-btn" data-act="new">編成を変更する</button></div><div class="victory-grid">${[0,1].map(s=>`<div><b>${sideLabel(s)}</b><span>生存者 ${alive(s).length}/6</span><span>手札 ${game.players[s].hand.length}枚</span></div>`).join('')}</div></section><div class="log-panel"><div class="boxheading"><h3>対戦ログ</h3></div><div class="log-list">${game.log.slice(0,65).map(v=>`<p>${escapeHTML(v)}</p>`).join('')}</div></div>`}
@@ -6808,6 +6855,7 @@ async function handleAction(el){let a=el.dataset.act;if(!a)return;
  case 'confirmLineup':{let chosen=plannedChoices.slice();plannedChoices=[];commitSelection(game.currentSelectSide,chosen);return}
  case 'startP2':game.phase='select';game.currentSelectSide=1;plannedChoices=[];render();return;
  case 'resume':passPending=false;render();return;
+ case 'moveField':{let side=Number(el.dataset.side),uid=el.dataset.uid,dir=Number(el.dataset.dir),p=game?.players?.[side],idx=p?.field.indexOf(uid);if(idx!==undefined&&idx>=0){const to=idx+dir;if(to>=0&&to<p.field.length)reorderFieldUnits(side,uid,p.field[to]);}render();return}
  case 'chooseNormal':{let h=game.players[game.current.side].team.find(x=>x.uid===game.current.uid);enterTarget({kind:'normal',source:h,side:game.current.side,targetType:'enemy',label:'通常攻撃'});return}
  case 'chooseSkill':{let h=game.players[game.current.side].team.find(x=>x.uid===game.current.uid);let i=Number(el.dataset.skill),sk=HERO_MAP[h.id].skills[i];if(!getPayment(game.current.side,sk)||skillExhausted(h,sk,i))return;enterTarget({kind:'skill',source:h,side:game.current.side,skill:i,targetType:sk.name==='みがわり'?'self':(TARG[h.id]?.[i]||sk.target||'enemy'),label:sk.name});return}
  case 'activateTrait':{let h=game.players.flatMap(p=>p.team).find(x=>x.uid===el.dataset.uid);if(h)activateTrait(h);return}
@@ -6833,7 +6881,7 @@ async function handleAction(el){let a=el.dataset.act;if(!a)return;
  case 'sacrifice':{let fn=sacrificeResolver;sacrificeResolver=null;if(game)game.pendingSacrifice=null;render();if(fn)fn(el.dataset.uid||null);return}
  }
 }
-function handleForm(el){let a=el.dataset.act;if(a==='deckCount'){changeDeckAbsolute(el.dataset.card,el.value);render();return;}if(a==='formation'){let f=FORMATIONS.find(x=>x.key===el.value);if(f){config.picks[Number(el.dataset.side)]=f.ids.slice();saveConfig();render()}}
+function handleForm(el){let a=el.dataset.act;if(a==='handSort'){let side=Number(el.dataset.side);if(game?.players?.[side]){game.players[side].handSort=['drawn','type','mp','name'].includes(el.value)?el.value:'drawn';persist();render()}return;}if(a==='deckCount'){changeDeckAbsolute(el.dataset.card,el.value);render();return;}if(a==='formation'){let f=FORMATIONS.find(x=>x.key===el.value);if(f){config.picks[Number(el.dataset.side)]=f.ids.slice();saveConfig();render()}}
  if(a==='manageSearch'){manageSearch=el.value;render();let e=document.querySelector('[data-act=manageSearch]');if(e){e.focus();e.setSelectionRange(manageSearch.length,manageSearch.length)}}
  if(a==='search'){let pos=el.selectionStart;queryText=el.value;render();let input=$('#heroSearch');if(input){input.focus();input.setSelectionRange(pos,pos)}}
  if(a==='filter'){heroFilter=el.value;render()}
@@ -6841,8 +6889,12 @@ function handleForm(el){let a=el.dataset.act;if(a==='deckCount'){changeDeckAbsol
 const oldNextActor=nextActor;nextActor=function(){let prev=game?.current?.side;oldNextActor();let now=game?.current?.side;if(game?.mode==='local'&&game.phase==='acting'&&now!==null&&now!==prev&&prev!==undefined){passPending=true;render()}};
 document.addEventListener('click',ev=>{let e=ev.target.closest('[data-act]');if(!e)return;if(e.dataset.act==='search'||e.dataset.act==='filter'||e.dataset.act==='formation')return;handleAction(e).catch(err=>{console.error(err);alert('処理中にエラーが発生しました：'+err.message);waiting=false;render()})});
 document.addEventListener('input',ev=>{if(['search','manageSearch'].includes(ev.target.dataset.act))handleForm(ev.target)});
-document.addEventListener('change',ev=>{if(['filter','formation','deckCount'].includes(ev.target.dataset.act))handleForm(ev.target)});
+document.addEventListener('change',ev=>{if(['filter','formation','deckCount','handSort'].includes(ev.target.dataset.act))handleForm(ev.target)});
 document.addEventListener('submit',ev=>{if(!ev.target.matches('#cardManageForm'))return;ev.preventDefault();try{let c=captureManageForm();commitUserCards([c]);editingCard=null;managePanel='list';render()}catch(e){alert('登録できません：'+e.message)}});
 document.addEventListener('change',async ev=>{let a=ev.target.dataset.act;if(a==='importTextFile'){let file=ev.target.files?.[0];if(file){pasteDraft=await file.text();managePanel='import';manageNotice='TXTファイルを読み込みました。内容を確認して「本文から取り込む」を押してください。';render()}}else if(a==='presetImportFile'){let file=ev.target.files?.[0];if(file)try{let txt=await file.text();if(txt.length>750000)throw Error('JSONが大きすぎます');let data=JSON.parse(txt);importNamedFormations(data);render()}catch(e){presetNotice='取り込み失敗：'+e.message;render()}}else if(a==='deckImportFile'){let file=ev.target.files?.[0];if(file)try{let parsed=JSON.parse(await file.text());importDeckFile(parsed);render()}catch(e){deckNotice='取り込み失敗：'+e.message;render()}}else if(a==='importJsonFile'){let file=ev.target.files?.[0];if(file)try{let data=JSON.parse(await file.text());let cards=Array.isArray(data)?data:data.cards;if(!Array.isArray(cards))throw Error('JSON配列または {cards: [...]} の形式で指定してください');if(!confirm(cards.length+'枚のJSONカードを登録しますか？'))return;commitUserCards(cards);managePanel='list';render()}catch(e){alert('JSON取り込み失敗：'+e.message)}}});
+document.addEventListener('dragstart',ev=>{const slot=ev.target.closest('[data-field-slot]');if(!slot||slot.getAttribute('draggable')!=='true')return;fieldDragUid=slot.dataset.fieldSlot;fieldDragSide=slot.dataset.fieldSide;slot.classList.add('is-dragging');if(ev.dataTransfer){ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',fieldDragUid)}});
+document.addEventListener('dragover',ev=>{const slot=ev.target.closest('[data-field-slot]');if(!slot||!fieldDragUid||slot.dataset.fieldSide!==fieldDragSide)return;ev.preventDefault();if(ev.dataTransfer)ev.dataTransfer.dropEffect='move';document.querySelectorAll('.field-slot.drop-target').forEach(x=>x.classList.remove('drop-target'));slot.classList.add('drop-target')});
+document.addEventListener('drop',ev=>{const slot=ev.target.closest('[data-field-slot]');if(!slot||!fieldDragUid)return;ev.preventDefault();const from=fieldDragUid,to=slot.dataset.fieldSlot,side=Number(slot.dataset.fieldSide);if(slot.dataset.fieldSide===fieldDragSide)reorderFieldUnits(side,from,to);fieldDragUid=null;fieldDragSide=null;render()});
+document.addEventListener('dragend',()=>{fieldDragUid=null;fieldDragSide=null;document.querySelectorAll('.field-slot.is-dragging,.field-slot.drop-target').forEach(x=>x.classList.remove('is-dragging','drop-target'))});
 initDeckBuilder();initializeFormations();restore();render();
 </script></body></html>
