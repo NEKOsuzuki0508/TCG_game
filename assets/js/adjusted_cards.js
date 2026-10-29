@@ -11,6 +11,7 @@ function hasField(side,id){return field(side).some(h=>h.id===id)}
 function sourceDebilitated(h){return !!(h.burn||h.poison||h.sleep||h.confusion||h.charm||h.combustion||h.marks||statDebuff(h))}
 function sourceTrue(actor,target,n,label='確定ダメージ',boost=true){
  if(!target||target.hp<=0)return 0;
+ if(actor&&ownerOf(actor)!==ownerOf(target)&&((game.currentSkillSpecial||[]).includes('やみ')&&traitNameOf(target)==='もんばん'||(game.currentSkillSpecial||[]).includes('水')&&traitNameOf(target)==='地に足うまってる')){log(`とくせい：${target.name}が属性カードの効果を無効化`);return 0}
  const attackerSide=actor?ownerOf(actor):1-ownerOf(target);
  const b=boost&&hasField(attackerSide,1010)?5:0;
  return directDamage(actor,target,n+b,label,true);
@@ -105,7 +106,8 @@ function sourceOnDebuff(target){
 }
 function sourceGiveCombustion(target){
  if(!target||target.hp<=0||target.combustion)return false;
- target.combustion=1;log(`${target.name}：燃焼を付与（次の行動直前に確定10）`);sourceOnDebuff(target);return true;
+ if(((game.currentSkillSpecial||[]).includes('やみ')&&traitNameOf(target)==='もんばん')||((game.currentSkillSpecial||[]).includes('水')&&traitNameOf(target)==='地に足うまってる'))return false;
+ target.combustion=1;log(`${target.name}：燃焼を付与（次の行動直前に確定10）`);sourceOnDebuff(target);if(typeof sourceOnCombustion==='function')sourceOnCombustion(target);return true;
 }
 function sourceOnCombustion(target){
  const side=1-ownerOf(target);
