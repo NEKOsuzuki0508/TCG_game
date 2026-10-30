@@ -145,6 +145,9 @@ async function handleAction(el){let a=el.dataset.act;if(!a)return;
  if(!okay)return;if(req.kind==='normal')await actNormal(req.source,target);else if(req.kind==='skill')await actSkill(req.source,req.skill,target);else startAssist(req.side,req.label,target);return}
  case 'cancelTarget':selected=null;render();return;
  case 'passAction':{if(!game.current||waiting)return;let h=game.players[game.current.side].team.find(x=>x.uid===game.current.uid);if(h){selected=null;log(`${h.name}は行動をパス`);endAction(h)}return}
+ case 'submitCardReview':{
+  if(!accountUser){alert('全体公開の申請にはアカウントへのログインが必要です。');return}
+  try{const card=cleanCard(captureManageForm());if(!confirm('このカードを全プレイヤー向けに公開申請します。承認されるまでは公開されません。'))return;const result=await accountSubmitCardForReview(card);manageNotice='公開申請を受け付けました。管理者の承認待ちです（申請ID：'+result.id+'）。';render()}catch(e){alert('公開申請に失敗しました：'+e.message)}return}
  case 'manageTab':managePanel=el.dataset.val;if(managePanel==='edit'&&!editingCard)editingCard=makeBlankCard();render();return;
  case 'newCard':editingCard=makeBlankCard();managePanel='edit';manageNotice='';render();return;
  case 'editUser':editingCard=JSON.parse(JSON.stringify(USER_CARDS.find(c=>c.id===Number(el.dataset.id))));managePanel='edit';render();return;
