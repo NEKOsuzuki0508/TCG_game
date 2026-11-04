@@ -3070,3 +3070,9 @@ a {
         font-size: 10px
     }
 }
+/* AI difficulty selector */
+.ai-difficulty{margin-top:18px;padding-top:16px;border-top:1px solid #2b4054}
+.difficulty-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+.difficulty-tabs button{padding:10px 8px}
+.difficulty-tabs small{font-size:10px}
+@media(max-width:520px){.difficulty-tabs{grid-template-columns:1fr}.difficulty-tabs button{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left}.difficulty-tabs small{margin:0;text-align:right}}
