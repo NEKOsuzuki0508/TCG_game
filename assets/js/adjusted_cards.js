@@ -26,7 +26,10 @@ function sourceStartMatch() {
 function sourceOnEnter(h, firstEntry = true) {
     if (!firstEntry) return;
     const side = ownerOf(h);
-    if ([1002, 1006, 1012, 1018, 1024, 1030].includes(h.id)) searchDeck(side, c => /^[123]MP$/.test(c));
+    if ([1002, 1006, 1012, 1018, 1024, 1030].includes(h.id)) {
+        const drawn = searchDeck(side, c => /^[123]MP$/.test(c));
+        if (h.id === 1012) log(drawn ? 'アイリス「ハイドロバーン」：初回登場時、MPカードを1枚獲得' : 'アイリス「ハイドロバーン」：山札にMPカードがなく、ドローできなかった');
+    }
     if ([1006, 1024, 1030].includes(h.id)) {
         h.sourceReduceUntil = game.turn;
         log(`${h.name}：このターン、味方全員が受ける攻撃ダメージ−10`);
@@ -34,10 +37,6 @@ function sourceOnEnter(h, firstEntry = true) {
 }
 function sourceTurnStart() {
     for (let side = 0; side < 2; side++) {
-        if (hasField(side, 1013)) {
-            const a = field(side).slice().sort((x, y) => stat(x, 'defense') - stat(y, 'defense'))[0];
-            if (a) buff(a, 'defense', 10, 0);
-        }
         if (hasField(side, 1019)) {
             let pool = field(1 - side); if (pool.length) buff(pool[rand(pool.length)], 'attack', -10, 0);
         }
@@ -151,7 +150,15 @@ function sourceAfterAttack(actor, target, amount, options) {
 function sourceOnEndAction(h) { }
 function sourceOnSkillCast(h, t) {
     const side = ownerOf(h);
-    if (hasField(side, 1012)) for (const a of field(side)) buff(a, 'defense', 10, 0);
+    const iris = field(side).find(a => a.id === 1012 && a.hp > 0);
+    if (!iris) return;
+    // ハイドロバーンは同一ターン中に何度技を使っても+10のまま（重複加算しない）。
+    for (const a of field(side)) {
+        if (a.hydroBurnTurn === game.turn) continue;
+        buff(a, 'defense', 10, 0);
+        a.hydroBurnTurn = game.turn;
+    }
+    log(`とくせい：アイリス「ハイドロバーン」：味方全体のぼうぎょ＋10（ターン${game.turn}）`);
 }
 function sourceEndRound() {
     for (let s = 0; s < 2; s++)if (hasField(s, 1034) && game.players[s].attacks >= 3) game.players[s].adjustedOlgaBoost = true;

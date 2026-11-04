@@ -23,7 +23,7 @@ const escapeHTML = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 const rand = n => Math.floor(Math.random() * n);
 const roll = p => Math.random() < p;
 const shuffled = a => { let r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const k = rand(i + 1);[r[i], r[k]] = [r[k], r[i]] } return r };
-let config = { mode: 'ai', picks: [FORMATIONS[0].ids.slice(), FORMATIONS[4].ids.slice()], activeSide: 0, view: 'battle', showDetails: null, editorSide: null };
+let config = { mode: 'ai', aiDifficulty: 'easy', picks: [FORMATIONS[0].ids.slice(), FORMATIONS[4].ids.slice()], activeSide: 0, view: 'battle', showDetails: null, editorSide: null };
 let game = null; let selected = null; let waiting = false; let lastOutcome = ''; let sacrificeResolver = null;
 const LSKEY = 'tcg_vivid_state_v2';
 let passPending = false;
@@ -221,7 +221,7 @@ function checkVictory() {
 }
 function finish(winner) { game.phase = 'ended'; game.winner = winner; selected = null; log(winner < 0 ? '引き分け' : `${winner === 0 ? '青' : '赤'}側の勝利！`); render(); persist() }
 function startMatch() {
-  game = { mode: config.mode, phase: 'select', turn: 0, players: [makePlayer(0), makePlayer(1)], log: [], counterThisTurn: [0, 0], planned: [null, null], currentSelectSide: 0, order: [], current: null, winner: null, pendingDeathTraits: [], actionNameCharLog: [], lastSkillSpecial: [], lastSkillNameBySide: [], lastSpecialUsedBySide: [[], []] };
+  game = { mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy', phase: 'select', turn: 0, players: [makePlayer(0), makePlayer(1)], log: [], counterThisTurn: [0, 0], planned: [null, null], currentSelectSide: 0, order: [], current: null, winner: null, pendingDeathTraits: [], actionNameCharLog: [], lastSkillSpecial: [], lastSkillNameBySide: [], lastSpecialUsedBySide: [[], []] };
   for (let side = 0; side < 2; side++) { if (validateDeckArray(deckSlots[side])) log(`${side ? '赤' : '青'}：保存済みの60枚カスタムデッキを使用`); draw(side, 5); }
   for (let side = 0; side < 2; side++)for (let h of game.players[side].team) { let tr = HERO_MAP[h.id]?.traitEffect; if (tr === 'opening_draw') draw(side, 1) }
   if (typeof sourceStartMatch === 'function') sourceStartMatch();
@@ -257,7 +257,57 @@ function commitSelection(side, uidList) {
     beginTurn();
   }
 }
-function pickAiLineup(side) { let p = game.players[side]; let prev = p.field, c = alive(side).slice(); let forced = c.filter(h => h.tauntTurn === game.turn); let ranked = c.sort((a, b) => ((prev.includes(b.uid) ? 20 : 0) + b.hp / 8 + stat(b, 'speed') / 3) - ((prev.includes(a.uid) ? 20 : 0) + a.hp / 8 + stat(a, 'speed') / 3)); return [...forced, ...ranked.filter(h => !forced.some(x => x.uid === h.uid))].slice(0, 3).map(h => h.uid) }
+
+function aiDifficulty(){return game?.aiDifficulty||config.aiDifficulty||'easy'}
+function aiStatusValue(h){return (h.burn||0)*13+(h.poison||0)*16+(h.confusion||0)*17+(h.sleep?42:0)+(h.combustion?30:0)+(h.skipNextAction?38:0)}
+function aiSkillText(s){return `${s?.name||''} ${s?.desc||''} ${(s?.special||[]).join(' ')}`}
+function aiThreatScore(enemy){
+ let best=0;
+ for(let i=0;i<(HERO_MAP[enemy.id]?.skills||[]).length;i++){
+  const sk=HERO_MAP[enemy.id].skills[i]; if(!getPayment(0,sk)||skillExhausted(enemy,sk,i))continue;
+  const tx=aiSkillText(sk),dm=tx.match(/(\d+)\s*(?:ダメージ|のダメージ)/);
+  let v=stat(enemy,'attack')*.28+(dm?Number(dm[1])*.65:0);
+  if(/全体|全員|敵全体/.test(tx))v+=25;
+  if(/ねむり|みりょう|行動不能|封印|即死|強力/.test(tx))v+=22;
+  if(/やけど|どく|こんらん/.test(tx))v+=12;
+  best=Math.max(best,v);
+ }
+ return best+stat(enemy,'speed')*.08+(enemy.hp<=35?8:0)
+}
+function aiTarget(actor,type,pool,diff){
+ if(!pool.length)return null;
+ if(diff==='easy')return type==='self'?actor:type==='ally'?pool.slice().sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:type==='any'?pool[rand(pool.length)]:pool.slice().sort((a,b)=>a.hp-b.hp)[0];
+ const side=ownerOf(actor),ally=type==='ally'||(type==='any'&&pool.some(x=>ownerOf(x)===side));
+ if(type==='self')return actor;
+ return pool.slice().sort((a,b)=>{
+  const score=x=>ally?aiStatusValue(x)*.8+(x.maxHp-x.hp)*.35+(diff==='hard'?aiThreatScore(x)*.2:0):
+   (x.hp<=stat(actor,'attack')?55:0)+(diff==='hard'?aiThreatScore(x)*.75:0)+(x.hp<=35?18:0)-x.hp*.18;
+  return score(b)-score(a)
+ })[0]
+}
+function aiSkillScore(actor,skill,side,target,diff){
+ const tx=aiSkillText(skill);let v=0,dm=tx.match(/(\d+)\s*(?:ダメージ|のダメージ)/);
+ if(dm)v+=Number(dm[1])*.8;
+ if(/攻撃|ダメージ|斬|撃|砲|弾/.test(tx))v+=18+stat(actor,'attack')*.12;
+ if(/全体|全員|すべての敵|敵全体/.test(tx))v+=field(1-side).length*12;
+ if(/やけど|どく|ねむり|こんらん|みりょう|行動不能|封印/.test(tx))v+=20;
+ if(/防御|シールド|軽減|無効化/.test(tx))v+=13;
+ if(/強化|攻撃力.*上昇|防御力.*上昇|素早さ.*上昇/.test(tx))v+=12;
+ if(target&&ownerOf(target)===side){
+  if(/回復|治療|HP\s*[＋+]|HPを.*回復/.test(tx))v+=Math.min(target.maxHp-target.hp,60)*.75-8;
+  if(/状態異常.*(回復|解除)|(回復|解除|治療).*(やけど|どく|ねむり|こんらん|みりょう|状態異常)/.test(tx))v+=aiStatusValue(target)*.9;
+ }else if(target&&/(即死|撃破|戦闘不能)/.test(tx)&&target.hp<=40)v+=80;
+ const pay=getPayment(side,skill);v-=Math.max(0,(pay?.length||0)-1)*3;
+ if(diff==='hard'&&target&&ownerOf(target)!==side)v+=aiThreatScore(target)*.08;
+ return v
+}
+
+function pickAiLineup(side){let p=game.players[side],prev=p.field,c=alive(side).slice(),forced=c.filter(h=>h.tauntTurn===game.turn);
+ c.sort((a,b)=>{let base=x=>(prev.includes(x.uid)?20:0)+x.hp/8+stat(x,'speed')/3;
+ if(aiDifficulty()==='easy')return base(b)-base(a);
+ let score=x=>base(x)-aiStatusValue(x)*.18+(aiDifficulty()==='hard'?aiThreatScore(x)*.25:0);
+ return score(b)-score(a)});
+ return [...forced,...c.filter(h=>!forced.some(x=>x.uid===h.uid))].slice(0,3).map(h=>h.uid)}
 function onEnter(h) {
   const firstEntry = !h.entered; h.entered = true; h.enteredTurn = game.turn; let side = ownerOf(h); let tr = HERO_MAP[h.id]?.traitEffect;
   if (typeof sourceOnEnter === 'function') sourceOnEnter(h, firstEntry); officialTraitOnEnter(h);
@@ -267,7 +317,18 @@ function onEnter(h) {
 }
 function officialTraitFormation(side) { const f = field(side); if (f.length !== 3) return; for (const h of f) { const tn = traitNameOf(h); if (tn === 'じつはリーダー') for (const x of f) buff(x, 'defense', 10, 0); if (tn === 'じつはサブリーダー') for (const x of f) buff(x, 'attack', 10, 0); if (tn === 'じつはむしょく' && !h.officialMaxHpBoosted) { for (const x of f) { x.maxHp += 10; x.hp = Math.min(x.maxHp, x.hp + 10) } h.officialMaxHpBoosted = true; log('とくせい「じつはむしょく」：味方全員の最大HP＋10') } } }
 function beginTurn() {
-  game.phase = 'acting'; for (let s = 0; s < 2; s++) { let p = game.players[s], old = p.field.slice(); for (let h of p.team) h.wasInFieldPreviousTurn = old.includes(h.uid); p.field = game.planned[s].slice(); for (let h of field(s)) if (!old.includes(h.uid)) onEnter(h) } for (let s = 0; s < 2; s++)officialTraitFormation(s);
+  game.phase = 'acting'; for (let s = 0; s < 2; s++) { let p = game.players[s], old = p.field.slice(); for (let h of p.team) h.wasInFieldPreviousTurn = old.includes(h.uid); p.field = game.planned[s].slice(); for (let h of field(s)) if (!old.includes(h.uid)) onEnter(h) }
+  // マリナ「完全解析」：そのターンの配置確定後、味方の防御が最も低い1人を強化する。
+  for (let side = 0; side < 2; side++) {
+    const marina = field(side).find(h => h.id === 1013 && h.hp > 0);
+    if (!marina) continue;
+    const target = field(side).slice().sort((a, b) => stat(a, 'defense') - stat(b, 'defense'))[0];
+    if (target) {
+      buff(target, 'defense', 10, 0);
+      log(`とくせい：マリナ「完全解析」：${target.name}のぼうぎょ＋10`);
+    }
+  }
+  for (let s = 0; s < 2; s++)officialTraitFormation(s);
   // ステータス異常を場のキャラにのみ適用、行動順の前に解決。
   for (let s = 0; s < 2; s++)for (let h of field(s).slice()) { if (h.burn) directDamage(null, h, h.burn * 5, 'やけどの継続ダメージ', false); if (h.poison) directDamage(null, h, h.poison * 5, 'どくの継続ダメージ', false); if (h.confusion) { directDamage(null, h, 10 * Math.min(2, h.confusion), 'こんらんの継続ダメージ', false); h.confusion = Math.max(0, h.confusion - 1) } }
   if (processDeathQueue()) return; if (checkVictory()) return; log(`両軍の配置が確定。素早さ順に行動`); nextActor()
@@ -295,11 +356,19 @@ function endRound() {
 async function takeAiAction() {
   if (!game || game.phase !== 'acting' || !game.current || game.current.side !== 1 || waiting) return;
   let h = game.players[1].team.find(x => x.uid === game.current.uid); if (!h || h.hp === 0) return nextActor();
-  let skills = HERO_MAP[h.id].skills; let candidates = skills.map((s, i) => ({ s, i, p: getPayment(1, s) })).filter(x => x.p && !skillExhausted(h, x.s, x.i) && canAiUseSkill(h, x.s, x.i) && !(h.banAttackTurn === game.turn && isAttackSkill(x.s)));
-  let healing = candidates.filter(x => /(回復|HP\+|HPを.+回復|治療)/.test(x.s.desc + ' ' + x.s.name));
-  let chosen = (field(1).some(x => x.hp < x.maxHp - 30) && healing.length && roll(.55)) ? healing[rand(healing.length)] : (candidates.length && roll(.78) ? candidates[rand(candidates.length)] : null);
-  let targ = chosen ? skillTargetType(h, chosen.s, chosen.i) : 'enemy', pool = targ === 'ally' ? field(1) : targ === 'self' ? [h] : targ === 'any' ? [...field(0), ...field(1)] : field(0);
-  let t = (targ === 'none' ? null : targ === 'self' ? h : targ === 'ally' ? (pool.slice().sort((a, b) => (b.maxHp - b.hp) - (a.maxHp - a.hp))[0]) : targ === 'any' ? pool[rand(pool.length)] : pool.slice().sort((a, b) => a.hp - b.hp)[0]);
+  let skills=HERO_MAP[h.id].skills,candidates=skills.map((s,i)=>({s,i,p:getPayment(1,s)})).filter(x=>x.p&&!skillExhausted(h,x.s,x.i)&&canAiUseSkill(h,x.s,x.i)&&!(h.banAttackTurn===game.turn&&isAttackSkill(x.s)));
+  const diff=aiDifficulty();let chosen,targ,pool,t;
+  if(diff==='easy'){
+   let healing=candidates.filter(x=>/(回復|HP\+|HPを.+回復|治療)/.test(x.s.desc+' '+x.s.name));
+   chosen=(field(1).some(x=>x.hp<x.maxHp-30)&&healing.length&&roll(.55))?healing[rand(healing.length)]:(candidates.length&&roll(.78)?candidates[rand(candidates.length)]:null);
+   targ=chosen?skillTargetType(h,chosen.s,chosen.i):'enemy';pool=targ==='ally'?field(1):targ==='self'?[h]:targ==='any'?[...field(0),...field(1)]:field(0);
+   t=targ==='none'?null:targ==='self'?h:targ==='ally'?pool.slice().sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:targ==='any'?pool[rand(pool.length)]:pool.slice().sort((a,b)=>a.hp-b.hp)[0];
+  }else{
+   let options=candidates.map(x=>{let type=skillTargetType(h,x.s,x.i),targets=type==='ally'?field(1):type==='self'?[h]:type==='any'?[...field(0),...field(1)]:type==='none'?[]:field(0),target=aiTarget(h,type,targets,diff);return {...x,type,target,score:aiSkillScore(h,x.s,1,target,diff)}});
+   options.sort((a,b)=>b.score-a.score);let best=options[0];chosen=best&&best.score>=(diff==='hard'?5:12)?best:null;
+   targ=chosen?chosen.type:'enemy';pool=targ==='ally'?field(1):targ==='self'?[h]:targ==='any'?[...field(0),...field(1)]:field(0);
+   t=chosen?chosen.target:aiTarget(h,'enemy',pool,diff);
+  }
   if (!t && targ !== 'none') { chosen = null; t = field(0)[0] }
   if (!chosen && !t) { log(`${h.name}は対象がいないためパス`); endAction(h); return }
   if (chosen) await actSkill(h, chosen.i, t); else await actNormal(h, t);
@@ -534,12 +603,12 @@ function startAssist(side, name, target) {
   render(); persist()
 }
 function targetOfAssist(name) { return ['いずみのみず', 'にがいお茶', 'つちのかたまり', 'かみなりのたね', 'かんぽうゼリー', '市販結界装置'].includes(name) ? 'ally' : 'none' }
-function saveConfig() { try { localStorage.setItem('tcg_vivid_config', JSON.stringify({ picks: config.picks, mode: config.mode })) } catch (e) { } if (typeof accountMarkDirty === 'function') accountMarkDirty() }
+function saveConfig() { try { localStorage.setItem('tcg_vivid_config', JSON.stringify({ picks: config.picks, mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy' })) } catch (e) { } if (typeof accountMarkDirty === 'function') accountMarkDirty() }
 function persist() { if (!game) return; try { localStorage.setItem(LSKEY, JSON.stringify(game)) } catch (e) { } }
 function restore() {
   try {
     let c = JSON.parse(localStorage.getItem('tcg_vivid_config') || 'null');
-    if (c && c.picks?.every(p => p.length === 6)) config = { ...config, ...c };
+    if (c && c.picks?.every(p => p.length === 6)) config = { ...config, ...c, aiDifficulty: ['easy','normal','hard'].includes(c.aiDifficulty) ? c.aiDifficulty : 'easy' };
     let saved = JSON.parse(localStorage.getItem(LSKEY) || 'null');
     if (saved?.players?.length === 2 && ['select', 'acting', 'handoff', 'ended'].includes(saved.phase)) {
       game = saved;
