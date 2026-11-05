@@ -1,11 +1,11 @@
 /* 売ってないTCG / ブラウザ対戦エンジン */
 'use strict';
 const FORMATIONS = [
-  { key: 'mag', name: '陸軍｜磁気波動', ids: [1000, 1001, 1002, 1003, 1004, 1005], color: '#77e9e5' },
   { key: 'counter', name: '陸軍｜反撃', ids: [1006, 1007, 1008, 1009, 1010, 1011], color: '#ffb880' },
   { key: 'spread', name: '海軍｜大盾・拡散', ids: [1012, 1013, 1014, 1015, 1016, 1017], color: '#8da8ff' },
-  { key: 'status', name: '海軍｜状態異常', ids: [1018, 1019, 1020, 1021, 1022, 1023], color: '#c6a7fc' },
   { key: 'burn', name: '空軍｜燃焼', ids: [1024, 1025, 1026, 1027, 1028, 1029], color: '#ff8e7b' },
+  { key: 'status', name: '海軍｜状態異常', ids: [1018, 1019, 1020, 1021, 1022, 1023], color: '#c6a7fc' },
+  { key: 'mag', name: '陸軍｜磁気波動', ids: [1000, 1001, 1002, 1003, 1004, 1005], color: '#77e9e5' },
   { key: 'combo', name: '空軍｜通常攻撃・連撃', ids: [1030, 1031, 1032, 1033, 1034, 1035], color: '#f9dc79' }
 ];
 const SUPPORTS = ['いずみのみず', 'にがいお茶', 'つちのかたまり', 'かみなりのたね', 'かんぽうゼリー', '流れる魔力', '止められた魔力', 'まほうの甲冑', 'ひらめきの一手', 'ヒメアオホノカ', '市販結界装置'];
@@ -26,6 +26,89 @@ const shuffled = a => { let r = a.slice(); for (let i = r.length - 1; i > 0; i--
 let config = { mode: 'ai', aiDifficulty: 'easy', picks: [FORMATIONS[0].ids.slice(), FORMATIONS[4].ids.slice()], activeSide: 0, view: 'battle', showDetails: null, editorSide: null };
 let game = null; let selected = null; let waiting = false; let lastOutcome = ''; let sacrificeResolver = null;
 const LSKEY = 'tcg_vivid_state_v2';
+const CHALLENGE1_PROGRESS_KEY = 'tcg_challenge1_progress_v1';
+const CHALLENGE1_ORDER = ['counter', 'spread', 'burn', 'status', 'mag', 'combo'];
+let challengeRunStage = null;
+let challengeCloudRevision = null;
+let challengeCloudReady = false;
+let challengeCloudQueue = Promise.resolve();
+function cleanChallenge1Progress(progress) {
+  const completed = Array.isArray(progress?.completed)
+    ? progress.completed.filter(x => Number.isInteger(x) && x >= 0 && x < CHALLENGE1_ORDER.length)
+    : [];
+  return { completed: [...new Set(completed)].sort((a,b)=>a-b), updatedAt: Number(progress?.updatedAt || Date.now()) };
+}
+function getChallenge1Progress() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHALLENGE1_PROGRESS_KEY) || 'null');
+    return cleanChallenge1Progress(saved);
+  } catch (_) { return { completed: [], updatedAt: 0 }; }
+}
+function writeChallenge1ProgressLocal(progress) {
+  const clean = cleanChallenge1Progress(progress);
+  try { localStorage.setItem(CHALLENGE1_PROGRESS_KEY, JSON.stringify(clean)); } catch (_) {}
+  return clean;
+}
+async function syncChallenge1ProgressFromCloud() {
+  if (!accountUser || typeof accountGetChallengeProgress !== 'function') return;
+  challengeCloudReady = false;
+  try {
+    const remote = await accountGetChallengeProgress('challenge1');
+    challengeCloudRevision = Number.isSafeInteger(remote.revision) ? remote.revision : 0;
+    if (remote.data && typeof remote.data === 'object' && Array.isArray(remote.data.completed)) {
+      // Once a cloud record exists, it is authoritative across devices.
+      writeChallenge1ProgressLocal(remote.data);
+    } else {
+      // Migrate progress already present in this browser on the first cloud login.
+      const local = getChallenge1Progress();
+      if (local.completed.length) {
+        const saved = await accountSaveChallengeProgress('challenge1', local, challengeCloudRevision);
+        challengeCloudRevision = saved.revision;
+      }
+    }
+    challengeCloudReady = true;
+  } catch (error) {
+    challengeCloudReady = false;
+    console.warn('チャレンジ進行状況のクラウド取得に失敗しました。ローカル保存を継続します。', error);
+    accountNotice = 'チャレンジ進行状況をクラウドから取得できませんでした：' + error.message;
+  }
+}
+function queueChallenge1CloudSave(progress, replace = false) {
+  if (!accountUser || !challengeCloudReady || typeof accountSaveChallengeProgress !== 'function') return;
+  const snapshot = cleanChallenge1Progress(progress);
+  challengeCloudQueue = challengeCloudQueue.then(async () => {
+    try {
+      if (challengeCloudRevision === null) {
+        const current = await accountGetChallengeProgress('challenge1');
+        challengeCloudRevision = current.revision || 0;
+      }
+      let data = snapshot;
+      try {
+        const saved = await accountSaveChallengeProgress('challenge1', data, challengeCloudRevision);
+        challengeCloudRevision = saved.revision;
+      } catch (error) {
+        if (error.status !== 409) throw error;
+        const latest = await accountGetChallengeProgress('challenge1');
+        challengeCloudRevision = latest.revision || 0;
+        if (!replace && Array.isArray(latest.data?.completed)) {
+          data = cleanChallenge1Progress({ completed: latest.data.completed.concat(snapshot.completed) });
+          writeChallenge1ProgressLocal(data);
+        }
+        const saved = await accountSaveChallengeProgress('challenge1', data, challengeCloudRevision);
+        challengeCloudRevision = saved.revision;
+      }
+    } catch (error) {
+      console.warn('チャレンジ進行状況のクラウド保存に失敗しました。', error);
+      accountNotice = 'チャレンジ進行状況のクラウド保存に失敗しました：' + error.message;
+    }
+  });
+}
+function saveChallenge1Progress(progress, options = {}) {
+  const clean = writeChallenge1ProgressLocal(progress);
+  queueChallenge1CloudSave(clean, options.replace === true);
+  return clean;
+}
+
 let passPending = false;
 function log(line) { if (!game) return; game.log.unshift(line); game.log = game.log.slice(0, 110) }
 function ownerOf(h) { return game.players.findIndex(s => s.team.includes(h)) }
@@ -219,9 +302,19 @@ function checkVictory() {
   if (!game || game.phase === 'ended') return false; if (game.pendingDeathTraits?.length || game.manualPending?.deathTrigger) return false; let a = alive(0).length, b = alive(1).length;
   if (!a || !b) { finish(!a && !b ? -1 : (!a ? 1 : 0)); return true } return false
 }
-function finish(winner) { game.phase = 'ended'; game.winner = winner; selected = null; log(winner < 0 ? '引き分け' : `${winner === 0 ? '青' : '赤'}側の勝利！`); render(); persist() }
+function finish(winner) {
+  game.phase = 'ended'; game.winner = winner; selected = null;
+  if (game.challenge?.id === 'challenge1' && winner === 0 && !game.challenge.progressRecorded) {
+    const progress = getChallenge1Progress();
+    progress.completed.push(game.challenge.stage);
+    saveChallenge1Progress(progress);
+    game.challenge.progressRecorded = true;
+    log(`チャレンジ1「${FORMATIONS.find(f => f.key === game.challenge.formation)?.name || '編成戦'}」を突破！`);
+  }
+  log(winner < 0 ? '引き分け' : `${winner === 0 ? '青' : '赤'}側の勝利！`); render(); persist()
+}
 function startMatch() {
-  game = { mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy', phase: 'select', turn: 0, players: [makePlayer(0), makePlayer(1)], log: [], counterThisTurn: [0, 0], planned: [null, null], currentSelectSide: 0, order: [], current: null, winner: null, pendingDeathTraits: [], actionNameCharLog: [], lastSkillSpecial: [], lastSkillNameBySide: [], lastSpecialUsedBySide: [[], []] };
+  game = { mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy', challenge: Number.isInteger(challengeRunStage) ? { id: 'challenge1', stage: challengeRunStage, formation: CHALLENGE1_ORDER[challengeRunStage], progressRecorded: false } : null, phase: 'select', turn: 0, players: [makePlayer(0), makePlayer(1)], log: [], counterThisTurn: [0, 0], planned: [null, null], currentSelectSide: 0, order: [], current: null, winner: null, pendingDeathTraits: [], actionNameCharLog: [], lastSkillSpecial: [], lastSkillNameBySide: [], lastSpecialUsedBySide: [[], []] };
   for (let side = 0; side < 2; side++) { if (validateDeckArray(deckSlots[side])) log(`${side ? '赤' : '青'}：保存済みの60枚カスタムデッキを使用`); draw(side, 5); }
   for (let side = 0; side < 2; side++)for (let h of game.players[side].team) { let tr = HERO_MAP[h.id]?.traitEffect; if (tr === 'opening_draw') draw(side, 1) }
   if (typeof sourceStartMatch === 'function') sourceStartMatch();
@@ -276,6 +369,7 @@ function aiThreatScore(enemy){
 }
 function aiTarget(actor,type,pool,diff){
  if(!pool.length)return null;
+ if(type==='enemy' && actor && actor.id>=1012 && actor.id<=1017 && pool.length===3) return pool[1];
  if(diff==='easy')return type==='self'?actor:type==='ally'?pool.slice().sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:type==='any'?pool[rand(pool.length)]:pool.slice().sort((a,b)=>a.hp-b.hp)[0];
  const side=ownerOf(actor),ally=type==='ally'||(type==='any'&&pool.some(x=>ownerOf(x)===side));
  if(type==='self')return actor;
@@ -303,9 +397,16 @@ function aiSkillScore(actor,skill,side,target,diff){
 }
 
 function pickAiLineup(side){let p=game.players[side],prev=p.field,c=alive(side).slice(),forced=c.filter(h=>h.tauntTurn===game.turn);
+ const counterTeam=c.some(h=>h.id>=1006&&h.id<=1011);
  c.sort((a,b)=>{let base=x=>(prev.includes(x.uid)?20:0)+x.hp/8+stat(x,'speed')/3;
  if(aiDifficulty()==='easy')return base(b)-base(a);
  let score=x=>base(x)-aiStatusValue(x)*.18+(aiDifficulty()==='hard'?aiThreatScore(x)*.25:0);
+ if(counterTeam){
+  const rank=x=>({1008:100,1006:90,1009:80,1007:70,1010:60,1011:50}[x.id]||0);
+  const grave=game.players[side].graveyard?.length||0;
+  score=x=>scoreBase(x)+rank(x)+(x.id===1011?grave*18:0);
+  function scoreBase(x){return base(x)-aiStatusValue(x)*.18+(aiDifficulty()==='hard'?aiThreatScore(x)*.25:0)}
+ }
  return score(b)-score(a)});
  return [...forced,...c.filter(h=>!forced.some(x=>x.uid===h.uid))].slice(0,3).map(h=>h.uid)}
 function onEnter(h) {

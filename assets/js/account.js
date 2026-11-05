@@ -158,7 +158,14 @@ async function accountConnectAfterAuth({ registered = false } = {}) {
   } catch (e) {
     accountReady = false; accountVersion = null;
     accountNotice = 'クラウド同期の確認に失敗しました：' + e.message + '。アカウントへのログインは維持されています。';
-  } finally { accountBusy = false; render(); if (accountPending && accountReady) { accountPending = false; accountMarkDirty() } }
+  } finally {
+    accountBusy = false;
+    if (accountUser && typeof syncChallenge1ProgressFromCloud === 'function') {
+      await syncChallenge1ProgressFromCloud();
+    }
+    render();
+    if (accountPending && accountReady) { accountPending = false; accountMarkDirty() }
+  }
 }
 async function accountRestoreSession() {
   try { accountToken = sessionStorage.getItem(ACCOUNT_SESSION_KEY) || '' } catch (_) { accountToken = '' }
@@ -244,6 +251,28 @@ async function accountLogout() {
   const token = accountToken;
   accountSaveToken(''); accountUser = null; accountReady = false; accountVersion = null; accountNotice = 'ログアウトしました。ローカルのデータは残ります。'; render();
   if (token) try { await fetch(accountApiBase() + '/api/auth/logout', { method: 'POST', mode: 'cors', headers: { Authorization: 'Bearer ' + token } }) } catch (_) { }
+}
+
+/**
+ * チャレンジ進行状況を取得する。未保存の場合は revision:0 / data:null。
+ * @param {string} challengeId 英数字・_・- のみ、最大50文字
+ */
+async function accountGetChallengeProgress(challengeId) {
+  if (!accountUser) throw Error('チャレンジ進行状況のクラウド同期にはログインが必要です。');
+  if (!/^[a-zA-Z0-9_-]{1,50}$/.test(String(challengeId))) throw Error('チャレンジIDが不正です。');
+  return await accountRequest('/api/challenge-progress?challengeId=' + encodeURIComponent(challengeId));
+}
+/**
+ * チャレンジ進行状況を保存する。取得時のrevisionを渡し、競合時は409で通知される。
+ * @param {string} challengeId チャレンジID
+ * @param {object} data JSON互換の進行状況
+ * @param {number} revision 直前に取得したrevision（初回は0）
+ */
+async function accountSaveChallengeProgress(challengeId, data, revision) {
+  if (!accountUser) throw Error('チャレンジ進行状況のクラウド同期にはログインが必要です。');
+  if (!/^[a-zA-Z0-9_-]{1,50}$/.test(String(challengeId))) throw Error('チャレンジIDが不正です。');
+  if (!Number.isSafeInteger(revision) || revision < 0) throw Error('保存リビジョンが不正です。');
+  return await accountRequest('/api/challenge-progress', { method: 'PUT', body: { challengeId, revision, data } });
 }
 
 async function accountSubmitCardForReview(card) {
