@@ -115,8 +115,10 @@ function challenge2StatBonus(h,s){
 }
 function challenge2DamageReduce(actor,target,amount){
   if(!target||amount<=0)return amount;
-  if((target.halfDamageUntil||0)>=game.turn)amount=Math.ceil(amount/2);
-  if((target.skillDamageReduceUntil||-1)>=game.turn)amount=Math.max(0,amount-10);
+  let reduced=false;
+  if((target.halfDamageUntil||0)>=game.turn){amount=Math.ceil(amount/2);reduced=true;}
+  if((target.skillDamageReduceUntil||-1)>=game.turn){amount=Math.max(0,amount-10);reduced=true;}
+  if(reduced)challenge2DefenseTrigger(ownerOf(target));
   return amount;
 }
 function challenge2OnSkillCast(actor,target){
