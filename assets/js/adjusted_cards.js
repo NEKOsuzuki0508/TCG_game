@@ -243,7 +243,7 @@ function enemy1100StartMatch() {
         const team=game.players[side].team;
         if(team.some(h=>[1100,1108,1114,1120,1126,1132].includes(baseCardId(h))))
             for(const h of team) h.nextBarrier=(h.nextBarrier||0)+1;
-        if(team.some(h=>[1102,1112,1118].includes(baseCardId(h))))for(const h of team)h.halfDamageUntil=2;
+        if(team.some(h=>[1102,1112,1118].includes(baseCardId(h)))){for(const h of team)h.halfDamageUntil=2;enemy1100DefenseTrigger(side);}
         if(team.some(h=>baseCardId(h)===1130)) for(const h of team) h.combo35=true;
         if(team.some(h=>baseCardId(h)===1124)) searchDeck(side,c=>/^[123]MP$/.test(c));
     }
@@ -253,6 +253,7 @@ function enemy1100OnEnter(h,firstEntry) {
     const id=baseCardId(h),side=ownerOf(h);
     if([1106,1124,1130].includes(id)){
         for(const ally of teamAlive(side)) ally.halfDamageUntil=Math.max(ally.halfDamageUntil||0,game.turn+1);
+        enemy1100DefenseTrigger(side);
         log(h.name+'：味方全体の被ダメージを2ターン半減');
     }
 }
@@ -267,7 +268,7 @@ function enemy1100TurnStart() {
             const pool=foes.filter(x=>!x.combustion);
             if(pool.length)enemy1100GiveBurn(pool[rand(pool.length)]);
         }
-        if(enemy1100Has(side,1113)) for(const x of teamAlive(side))buff(x,'defense',10,0);
+        if(enemy1100Has(side,1113)){for(const x of teamAlive(side))buff(x,'defense',10,0);enemy1100DefenseTrigger(side);}
         if(enemy1100Has(side,1130)&&roll(.5))searchDeck(side,c=>/^[123]MP$/.test(c));
         const player=game.players[side];
         if(player.enemy1100OlgaMP){
@@ -299,6 +300,7 @@ function enemy1100StatBonus(h,s) {
     return n;
 }
 function enemy1100RawAttackBonus(actor) { return Number(actor?.attackDamageBonus||0); }
+function enemy1100DefenseTrigger(side) { if(enemy1100Has(side,1113))for(const ally of teamAlive(side))ally.attackDamageBonus=(ally.attackDamageBonus||0)+10; }
 function enemy1100DamageReduce(actor,target,amount) {
     if(!target)return amount;
     const side=ownerOf(target);
@@ -311,6 +313,7 @@ function enemy1100OnSkillCast(actor,target) {
     if(enemy1100Has(side,1106)) for(const ally of teamAlive(side)) ally.skillDamageReduceUntil=game.turn;
     if(enemy1100Has(side,1112)){
         for(const ally of teamAlive(side))buff(ally,'defense',10,0);
+        enemy1100DefenseTrigger(side);
         if(target&&target.hp>0)buff(target,'attack',-10,0);
     }
 }
