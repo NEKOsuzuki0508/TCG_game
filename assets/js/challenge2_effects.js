@@ -160,6 +160,11 @@ function challenge2AfterAttack(actor,target,amount,options){
     const pool=field(1-side);if(pool.length)c2True(actor,pool[rand(pool.length)],15,'メイメイ「チェインレーダー」');
   }
 }
+function challenge2OnDebuff(target){
+  if(!target||target.hp<=0)return;
+  const side=1-ownerOf(target),source=field(side).find(x=>x.id===1221);
+  if(source){const pool=field(ownerOf(target));if(pool.length)c2True(source,pool[rand(pool.length)],10,'ヴェイン「アビサルヴェノム」');}
+}
 function challenge2OnDirectDamage(target,amount,reason){
   if(!target||amount<=0||/レイジアンカー/.test(reason||''))return;
   const side=1-ownerOf(target),source=field(side).find(x=>x.id===1215);
