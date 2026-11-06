@@ -445,7 +445,7 @@ async function enemy1100SkillEffect(h,i,t) {
     case 1114:{const near=adj(t);await hit(t,70);for(const x of near)fixed(x,20,'アクアスピア拡散');break;}
     case 1115:{const near=adj(t);await hit(t,70);for(const x of near)fixed(x,20,'インパクトスプレッド');break;}
     case 1116:{for(const x of [t,...adj(t)])buff(x,'speed',-20,1);const ally=allies.find(x=>x.uid!==h.uid)||h;buff(ally,'defense',10,1);break;}
-    case 1117:{const triple=foes.length>=3;for(const x of foes.slice()){await hit(x,50);if(triple&&x.hp>0)fixed(x,20,'ギガディフュージョン追加');}break;}
+    case 1117:{const triple=foes.length>=3;for(const x of foes.slice()){await hit(x,50,0,{redirect:false});if(triple&&x.hp>0)fixed(x,20,'ギガディフュージョン追加');}break;}
     case 1118: await hit(t,90);break;
     case 1119: await hit(t,stat(h,'attack'));if(t.hp>0)t.banSkills=1;break;
     case 1120: await hit(t,80);if(t.hp>0&&weakenedTarget(t))fixed(t,40,'チェインキャノン追加');break;
@@ -454,7 +454,7 @@ async function enemy1100SkillEffect(h,i,t) {
     case 1123: await hit(t,100,0,{trueOnly:weakenedTarget(t)});break;
     case 1124: await hit(t,90);if(t.hp>0){if(!t.combustion)enemy1100GiveBurn(t);else fixed(t,10,'バタフライエフェクト追加');}break;
     case 1125: await hit(t,80);if(t.hp>0&&t.combustion){t.combustion=0;fixed(t,20,'フレイムスプレッド燃焼爆発');const pool=field(1-side).filter(x=>x.uid!==t.uid&&!x.combustion);if(pool.length)enemy1100GiveBurn(pool[rand(pool.length)]);}break;
-    case 1126: for(const x of foes.slice()){await hit(x,40);if(x.hp>0){if(x.combustion)buff(x,'defense',-20,1);else if(roll(.5))enemy1100GiveBurn(x);}}break;
+    case 1126: for(const x of foes.slice()){await hit(x,40,0,{redirect:false});if(x.hp>0){if(x.combustion)buff(x,'defense',-20,1);else if(roll(.5))enemy1100GiveBurn(x);}}break;
     case 1127: await hit(t,80);if(t.hp>0&&t.combustion){t.combustion=0;for(const x of field(1-side).slice())fixed(x,25,'ブラストチェイサー連鎖爆炎');}break;
     case 1128: heal(t,20);{const pool=field(1-side).filter(x=>!x.combustion);if(pool.length)enemy1100GiveBurn(pool[rand(pool.length)]);}break;
     case 1129: await hit(t,100,0,{trueOnly:!!t.combustion});break;
@@ -462,7 +462,7 @@ async function enemy1100SkillEffect(h,i,t) {
     case 1131: await hit(t,stat(h,'attack'));if(game.players[side].attacks>1&&t.hp>0)fixed(t,30,'ソニックストライク追加');break;
     case 1132: for(let k=0;k<3&&t&&t.hp>0;k++)await hit(t,30+k*15);break;
     case 1133: await hit(t,stat(h,'attack'));if(t.hp>0)fixed(t,game.players[side].attacks*10,'ソニックブレット追撃');break;
-    case 1134:{const prior=game.players[side].attacks>0;for(const x of foes.slice()){await hit(x,40);if(prior&&x.hp>0)fixed(x,20,'クラスターボム追加');}break;}
+    case 1134:{const prior=game.players[side].attacks>0;for(const x of foes.slice()){await hit(x,40,0,{redirect:false});if(prior&&x.hp>0)fixed(x,20,'クラスターボム追加');}break;}
     case 1135:{const count=game.players[side].attacks>=3?3:2;for(let k=0;k<count&&t&&t.hp>0;k++)await hit(t,40);break;}
     default:return true;
     }
