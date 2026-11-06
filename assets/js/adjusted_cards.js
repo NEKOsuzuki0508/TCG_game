@@ -225,7 +225,7 @@ function enemy1100Enemies(side) { return field(1-side); }
 function enemy1100True(actor,target,n,label) {
     if(!target||target.hp<=0)return 0;
     const side=actor?ownerOf(actor):1-ownerOf(target);
-    const spreadBonus=/(拡散|アクアスピア|インパクトスプレッド|レイジアンカー)/.test(label||'')&&enemy1100Has(side,1116)?10:0;
+    const spreadBonus=/(拡散|アクアスピア|インパクトスプレッド|レイジアンカー|連鎖電界|ギガディフュージョン)/.test(label||'')&&enemy1100Has(side,1116)?10:0;
     const bonus=(enemy1100Has(side,1110)?10:0)+spreadBonus;
     return directDamage(null,target,n+bonus,label||'確定ダメージ',false);
 }
@@ -450,7 +450,7 @@ async function enemy1100SkillEffect(h,i,t) {
     case 1114:{const near=adj(t);await hit(t,70);for(const x of near)fixed(x,20,'アクアスピア拡散');break;}
     case 1115:{const near=adj(t);await hit(t,70);for(const x of near)fixed(x,20,'インパクトスプレッド');break;}
     case 1116:{for(const x of [t,...adj(t)])buff(x,'speed',-20,1);const ally=allies.find(x=>x.uid!==h.uid)||h;buff(ally,'defense',10,1);break;}
-    case 1117:{const triple=foes.length>=3;for(const x of foes.slice()){await hit(x,50,0,{redirect:false});if(triple&&x.hp>0)fixed(x,20,'ギガディフュージョン追加');}break;}
+    case 1117:{const triple=foes.length>=3,power=50+(enemy1100Has(side,1116)?10:0);for(const x of foes.slice()){await hit(x,power,0,{redirect:false});if(triple&&x.hp>0)fixed(x,20,'ギガディフュージョン追加');}break;}
     case 1118: await hit(t,90);break;
     case 1119: await hit(t,stat(h,'attack'));if(t.hp>0)t.banSkills=1;break;
     case 1120: await hit(t,80);if(t.hp>0&&weakenedTarget(t))fixed(t,40,'チェインキャノン追加');break;
