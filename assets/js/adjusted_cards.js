@@ -368,17 +368,22 @@ function enemy1100MagnetApplied(target) {
 function enemy1100MagnetOverflow(target) {
     const side=1-ownerOf(target);
     if(enemy1100Alive(side,1104))for(const ally of game.players[side].team.filter(x=>x.hp>0))heal(ally,10);
-    if(enemy1100Has(side,1103)){
-        const lineup=game.planned?.[ownerOf(target)]||game.players[ownerOf(target)].field,index=lineup.indexOf(target.uid);
-        const adjacent=[lineup[index-1],lineup[index+1]].filter(Boolean).map(uid=>game.players[ownerOf(target)].team.find(x=>x.uid===uid&&x.hp>0)).filter(Boolean);
-        for(const x of adjacent){magnet(x,1,false);enemy1100True(null,x,10,'エレナ「連鎖電界」');}
+    if(enemy1100Has(side,1103)&&!game.enemy1100MagnetChainActive){
+        game.enemy1100MagnetChainActive=true;
+        try{
+            const lineup=game.planned?.[ownerOf(target)]||game.players[ownerOf(target)].field,index=lineup.indexOf(target.uid);
+            const adjacent=[lineup[index-1],lineup[index+1]].filter(Boolean).map(uid=>game.players[ownerOf(target)].team.find(x=>x.uid===uid&&x.hp>0)).filter(Boolean);
+            for(const x of adjacent){magnet(x,1,false);enemy1100True(null,x,10,'エレナ「連鎖電界」');}
+        }finally{game.enemy1100MagnetChainActive=false;}
     }
 }
 function enemy1100MagnetBurst(target,amount,initiator,neighbors) {
     const side=1-ownerOf(target);
     if(enemy1100Alive(side,1104))for(const ally of game.players[side].team.filter(x=>x.hp>0))heal(ally,10);
-    if(enemy1100Has(side,1103)){
-        for(const x of (neighbors||enemyAdjacent(target)).slice()){magnet(x,1,false);enemy1100True(null,x,10,'エレナ「連鎖電界」');}
+    if(enemy1100Has(side,1103)&&!game.enemy1100MagnetChainActive){
+        game.enemy1100MagnetChainActive=true;
+        try{for(const x of (neighbors||enemyAdjacent(target)).slice()){magnet(x,1,false);enemy1100True(null,x,10,'エレナ「連鎖電界」');}}
+        finally{game.enemy1100MagnetChainActive=false;}
     }
     if(baseCardId(initiator)===1101&&roll(.5)&&target.hp>0)magnet(target,1+rand(2),false);
 }
