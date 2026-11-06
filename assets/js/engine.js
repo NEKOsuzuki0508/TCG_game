@@ -491,7 +491,7 @@ async function actNormal(h, target) {
 async function actSkill(h, index, target) {
   if (waiting || h.hp <= 0) return; let side = ownerOf(h), skill = HERO_MAP[h.id].skills[index], payment = getPayment(side, skill); if (!payment) { alert('必要なMP・属性カードが手札にありません。'); return }
   if (skillExhausted(h, skill, index)) { alert('この技はゲーム中の使用回数上限に達しています。'); return }
-  if (h.banSkills) { h.banSkills = 0; alert('このキャラクターは持ち技を封じられています。'); return }
+  if (h.banSkills) { h.banSkills = 0; log(`${h.name}は技封印により持ち技を使用できない`); endAction(h); return }
   if (h.sleep && traitNameOf(h) === 'そろそろ起きなきゃ' && isAttackSkill(skill) && skill.name !== 'めざまし止めなきゃ') { log(`${h.name}はねむり中、「めざまし止めなきゃ」以外の攻撃技を使えない`); return }
   if (h.banAttackTurn === game.turn && isAttackSkill(skill)) { log(`${h.name}は攻撃制限中のため「${skill.name}」を使えない`); return }
   waiting = true; selected = null; consume(side, payment); if (skillUseLimit(skill) !== null) { h.usedSkills = h.usedSkills || {}; h.usedSkills[index] = Number(h.usedSkills[index] || 0) + 1 }
