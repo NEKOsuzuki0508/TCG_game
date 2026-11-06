@@ -243,6 +243,7 @@ function enemy1100StartMatch() {
         const team=game.players[side].team;
         if(team.some(h=>[1100,1108,1114,1120,1126,1132].includes(baseCardId(h))))
             for(const h of team) h.nextBarrier=(h.nextBarrier||0)+1;
+        if(team.some(h=>[1102,1112,1118].includes(baseCardId(h))))for(const h of team)h.halfDamageUntil=2;
         if(team.some(h=>baseCardId(h)===1130)) for(const h of team) h.combo35=true;
         if(team.some(h=>baseCardId(h)===1124)) searchDeck(side,c=>/^[123]MP$/.test(c));
     }
@@ -250,11 +251,10 @@ function enemy1100StartMatch() {
 function enemy1100OnEnter(h,firstEntry) {
     if(!firstEntry)return;
     const id=baseCardId(h),side=ownerOf(h);
-    if([1102,1106,1112,1118,1124,1130].includes(id)){
+    if([1106,1124,1130].includes(id)){
         for(const ally of field(side)) ally.halfDamageUntil=Math.max(ally.halfDamageUntil||0,game.turn+1);
         log(h.name+'：味方全体の被ダメージを2ターン半減');
     }
-    if(id===1106) for(const ally of field(side)) ally.skillDamageReduceUntil=game.turn;
 }
 function enemy1100TurnStart() {
     for(let side=0;side<2;side++){
