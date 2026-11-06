@@ -453,9 +453,9 @@ async function enemy1100SkillEffect(h,i,t) {
     case 1122: if(roll(.5))ailment(t,'sleep');else ailment(t,'charm');buff(t,'defense',-10,1);break;
     case 1123: await hit(t,100,0,{trueOnly:weakenedTarget(t)});break;
     case 1124: await hit(t,90);if(t.hp>0){if(!t.combustion)enemy1100GiveBurn(t);else fixed(t,10,'バタフライエフェクト追加');}break;
-    case 1125: await hit(t,80);if(t.hp>0&&t.combustion){t.combustion=0;fixed(t,20,'フレイムスプレッド燃焼爆発');const pool=field(1-side).filter(x=>x.uid!==t.uid&&!x.combustion);if(pool.length)enemy1100GiveBurn(pool[rand(pool.length)]);}break;
+    case 1125:{const wasBurning=!!t.combustion;await hit(t,80);if(wasBurning){t.combustion=0;if(t.hp>0)fixed(t,20,'フレイムスプレッド燃焼爆発');const pool=field(1-side).filter(x=>x.uid!==t.uid&&!x.combustion);if(pool.length)enemy1100GiveBurn(pool[rand(pool.length)]);}break;}
     case 1126: for(const x of foes.slice()){await hit(x,40,0,{redirect:false});if(x.hp>0){if(x.combustion)buff(x,'defense',-20,1);else if(roll(.5))enemy1100GiveBurn(x);}}break;
-    case 1127: await hit(t,80);if(t.hp>0&&t.combustion){t.combustion=0;for(const x of field(1-side).slice())fixed(x,25,'ブラストチェイサー連鎖爆炎');}break;
+    case 1127:{const wasBurning=!!t.combustion;await hit(t,80);if(wasBurning){t.combustion=0;for(const x of field(1-side).slice())fixed(x,25,'ブラストチェイサー連鎖爆炎');}break;}
     case 1128: heal(t,20);{const pool=field(1-side).filter(x=>!x.combustion);if(pool.length)enemy1100GiveBurn(pool[rand(pool.length)]);}break;
     case 1129: await hit(t,100,0,{trueOnly:!!t.combustion});break;
     case 1130: for(let k=0;k<3&&t&&t.hp>0;k++)await hit(t,30);break;
