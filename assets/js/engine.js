@@ -173,7 +173,7 @@ function buff(h, stat, amount, next = 1) { h.buffs.push({ stat, amount, until: g
 function stat(h, s) {
   let b = s === 'attack' ? h.baseA : s === 'defense' ? h.baseD : h.baseS; b += h.buffs.filter(x => x.stat === s && x.until >= game.turn).reduce((a, x) => a + x.amount, 0);
   if (s === 'defense' && baseCardId(h) === 1029 && others(ownerOf(h)).some(e => e.combustion)) b += 10;
-  if (typeof sourceStatBonus === 'function') b += (sourceStatBonus(h, s) || 0);
+  if (typeof sourceStatBonus === 'function') b += (sourceStatBonus(h, s) || 0); if(typeof enemy1100StatBonus==='function')b+=(enemy1100StatBonus(h,s)||0);
   if (s === 'attack') b += officialTraitAttackBonus(h);
   if (s === 'defense') b += officialTraitDefenseBonus(h);
   if (s === 'speed') b += officialTraitSpeedBonus(h);
