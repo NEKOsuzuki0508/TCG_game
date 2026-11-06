@@ -229,7 +229,8 @@ function enemy1100True(actor,target,n,label) {
     const bonus=(enemy1100Has(side,1110)?10:0)+spreadBonus;
     return directDamage(actor,target,n+bonus,label||'確定ダメージ',false);
 }
-function enemy1100Debilitated(h) { return !!(h.burn||h.poison||h.sleep||h.confusion||h.charm||statDebuff(h)); }
+function enemy1100HasAilment(h) { return !!(h.burn||h.poison||h.sleep||h.confusion||h.charm); }
+function enemy1100Debilitated(h) { return enemy1100HasAilment(h)||statDebuff(h); }
 function enemy1100GiveBurn(target) {
     if(!target||target.hp<=0||target.combustion)return false;
     target.combustion=1; target.combustionDamage=15;
@@ -267,6 +268,7 @@ function enemy1100TurnStart() {
             if(pool.length)enemy1100GiveBurn(pool[rand(pool.length)]);
         }
         if(enemy1100Has(side,1113)) for(const x of field(side))buff(x,'defense',10,0);
+        if(enemy1100Has(side,1130)&&roll(.5))searchDeck(side,c=>/^[123]MP$/.test(c));
         const player=game.players[side];
         if(player.enemy1100OlgaMP){
             player.enemy1100OlgaMP=false; player.mpMod-=1;
@@ -287,9 +289,8 @@ function enemy1100StatBonus(h,s) {
         if(id===1123)n+=foes.filter(enemy1100Debilitated).length*10;
         if(id===1125&&foes.some(x=>x.combustion))n+=20;
         if(id===1129&&foes.some(x=>x.combustion))n+=10;
-        if(foes.some(x=>x.marks>0)&&id===1105)n-=0;
         if(enemy1100Has(1-side,1105)&&h.marks>0)n-=10;
-        if(enemy1100Has(1-side,1122)&&enemy1100Debilitated(h))n-=10;
+        if(enemy1100Has(1-side,1122)&&enemy1100HasAilment(h))n-=10;
     }
     if(s==='defense'){
         if(id===1129&&foes.some(x=>x.combustion))n+=10;
