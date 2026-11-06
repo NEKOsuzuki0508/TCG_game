@@ -162,6 +162,7 @@ async function accountConnectAfterAuth({ registered = false } = {}) {
     accountBusy = false;
     if (accountUser && typeof syncChallenge1ProgressFromCloud === 'function') {
       await syncChallenge1ProgressFromCloud();
+      if(typeof syncChallenge2ProgressFromCloud==='function') await syncChallenge2ProgressFromCloud();
     }
     render();
     if (accountPending && accountReady) { accountPending = false; accountMarkDirty() }
