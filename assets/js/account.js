@@ -112,7 +112,7 @@ function accountStoreSyncState(revision, data) {
   try { localStorage.setItem(ACCOUNT_SYNC_STATE_KEY, JSON.stringify({ identity: accountSyncIdentity(), revision, fingerprint: accountFingerprint(accountComparableData(data)) })) } catch (e) { console.warn('同期状態を端末に記録できませんでした', e) }
 }
 function accountLocalHasData() {
-  const defaults = [FORMATIONS[0]?.ids || [], FORMATIONS[4]?.ids || []];
+  const defaults = [FORMATIONS.find(f => f.key === 'counter')?.ids || [], FORMATIONS.find(f => f.key === 'mag')?.ids || []];
   const picksChanged = !Array.isArray(config.picks) || config.picks.some((ids, i) => JSON.stringify(ids) !== JSON.stringify(defaults[i] || []));
   return USER_CARDS.length > 0 || savedFormations.length > 0 || deckSlots.some(Boolean) || picksChanged;
 }

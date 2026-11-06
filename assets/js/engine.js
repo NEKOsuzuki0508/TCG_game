@@ -3,7 +3,7 @@
 const FORMATIONS = [
   { key: 'mag', name: '陸軍｜磁気波動', ids: [1000, 1001, 1002, 1003, 1004, 1005], color: '#77e9e5' },
   { key: 'counter', name: '陸軍｜反撃', ids: [1006, 1007, 1008, 1009, 1010, 1011], color: '#ffb880' },
-  { key: 'spread', name: '海軍｜大盾・拡散', ids: [1012, 1013, 1014, 1015, 1016, 1017], color: '#8da8ff' },
+  { key: 'spread', name: '海軍｜拡散', ids: [1012, 1013, 1014, 1015, 1016, 1017], color: '#8da8ff' },
   { key: 'status', name: '海軍｜状態異常', ids: [1018, 1019, 1020, 1021, 1022, 1023], color: '#c6a7fc' },
   { key: 'burn', name: '空軍｜燃焼', ids: [1024, 1025, 1026, 1027, 1028, 1029], color: '#ff8e7b' },
   { key: 'combo', name: '空軍｜通常攻撃・連撃', ids: [1030, 1031, 1032, 1033, 1034, 1035], color: '#f9dc79' }
@@ -23,7 +23,7 @@ const escapeHTML = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 const rand = n => Math.floor(Math.random() * n);
 const roll = p => Math.random() < p;
 const shuffled = a => { let r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const k = rand(i + 1);[r[i], r[k]] = [r[k], r[i]] } return r };
-let config = { mode: 'ai', aiDifficulty: 'easy', picks: [FORMATIONS[0].ids.slice(), FORMATIONS[4].ids.slice()], activeSide: 0, view: 'battle', showDetails: null, editorSide: null };
+let config = { mode: 'ai', aiDifficulty: 'easy', picks: [FORMATIONS.find(f => f.key === 'counter').ids.slice(), FORMATIONS.find(f => f.key === 'mag').ids.slice()], activeSide: 0, view: 'battle', showDetails: null, editorSide: null };
 let game = null; let selected = null; let waiting = false; let lastOutcome = ''; let sacrificeResolver = null;
 const LSKEY = 'tcg_vivid_state_v2';
 const CHALLENGE1_PROGRESS_KEY = 'tcg_challenge1_progress_v1';
