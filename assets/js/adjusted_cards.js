@@ -6,8 +6,8 @@
 'use strict';
 const RESTORED_IDS = new Set(Array.from({ length: 36 }, (_, i) => 1000 + i));
 function teamAlive(side) { return game.players[side].team.filter(h => h.hp > 0) }
-function hasAlive(side, id) { return teamAlive(side).some(h => h.id === id) }
-function hasField(side, id) { return field(side).some(h => h.id === id) }
+function hasAlive(side, id) { return teamAlive(side).some(h => baseCardId(h) === id) }
+function hasField(side, id) { return field(side).some(h => baseCardId(h) === id) }
 function sourceDebilitated(h) { return !!(h.burn || h.poison || h.sleep || h.confusion || h.charm || h.combustion || h.marks || statDebuff(h)) }
 function sourceTrue(actor, target, n, label = '確定ダメージ', boost = true) {
     if (!target || target.hp <= 0) return 0;
@@ -18,7 +18,7 @@ function sourceTrue(actor, target, n, label = '確定ダメージ', boost = true
 }
 function sourceStartMatch() {
     for (let side = 0; side < 2; side++) {
-        for (const h of teamAlive(side)) if ([1008, 1014, 1020].includes(h.id)) {
+        for (const h of teamAlive(side)) if ([1008, 1014, 1020].includes(baseCardId(h))) {
             draw(side, 1); log(`${h.name}：ゲーム開始時の1枚ドロー`);
         }
     }
@@ -26,11 +26,11 @@ function sourceStartMatch() {
 function sourceOnEnter(h, firstEntry = true) {
     if (!firstEntry) return;
     const side = ownerOf(h);
-    if ([1002, 1006, 1012, 1018, 1024, 1030].includes(h.id)) {
+    if ([1002, 1006, 1012, 1018, 1024, 1030].includes(baseCardId(h))) {
         const drawn = searchDeck(side, c => /^[123]MP$/.test(c));
-        if (h.id === 1012) log(drawn ? 'アイリス「ハイドロバーン」：初回登場時、MPカードを1枚獲得' : 'アイリス「ハイドロバーン」：山札にMPカードがなく、ドローできなかった');
+        if (baseCardId(h) === 1012) log(drawn ? 'アイリス「ハイドロバーン」：初回登場時、MPカードを1枚獲得' : 'アイリス「ハイドロバーン」：山札にMPカードがなく、ドローできなかった');
     }
-    if ([1006, 1024, 1030].includes(h.id)) {
+    if ([1006, 1024, 1030].includes(baseCardId(h))) {
         h.sourceReduceUntil = game.turn;
         log(`${h.name}：このターン、味方全員が受ける攻撃ダメージ−10`);
     }
@@ -57,13 +57,13 @@ function sourceStatBonus(h, s) {
     const side = ownerOf(h), enemy = 1 - side; let b = 0;
     if (s === 'defense') {
         if (h.marks && hasField(enemy, 1005)) b -= 10;
-        if (h.id === 1029 && field(enemy).some(e => e.combustion)) b += 10;
+        if (baseCardId(h) === 1029 && field(enemy).some(e => e.combustion)) b += 10;
     }
     if (s === 'attack') {
-        if (h.id === 1011) b += field(side).filter(x => x.hp < x.maxHp).length * 10;
-        if (h.id === 1017 && field(side).reduce((v, x) => v + stat(x, 'defense'), 0) >= 150) b += 10;
+        if (baseCardId(h) === 1011) b += field(side).filter(x => x.hp < x.maxHp).length * 10;
+        if (baseCardId(h) === 1017 && field(side).reduce((v, x) => v + stat(x, 'defense'), 0) >= 150) b += 10;
         if (hasField(enemy, 1022) && sourceDebilitated(h)) b -= 10;
-        if (h.id === 1023) b += field(enemy).filter(sourceDebilitated).length * 10;
+        if (baseCardId(h) === 1023) b += field(enemy).filter(sourceDebilitated).length * 10;
         if (hasField(side, 1025) && field(enemy).some(x => x.combustion)) b += 10;
     }
     return b;
@@ -71,21 +71,21 @@ function sourceStatBonus(h, s) {
 function sourceAttackBonus(actor, target, side) {
     let n = 0;
     if (hasField(side, 1019) && sourceDebilitated(target)) n += 5;
-    if (actor.id === 1020 && sourceDebilitated(target)) n += 10;
+    if (baseCardId(actor) === 1020 && sourceDebilitated(target)) n += 10;
     return n;
 }
 function sourceExtraTrue(actor, target, side, baseTrue = 0) {
     let n = 0;
     if (hasField(side, 1031) && game.players[side].attacks >= 1) n += 10;
     if (baseTrue > 0 && hasField(side, 1010)) n += 5;
-    if (actor.id === 1027 && target.combustion) n += 10;
+    if (baseCardId(actor) === 1027 && target.combustion) n += 10;
     return n;
 }
 function sourceDamageReduce(actor, target, amount) {
     const side = ownerOf(target);
-    if (teamAlive(side).some(h => [1006, 1024, 1030].includes(h.id) && (h.sourceReduceUntil || 0) >= game.turn)) amount = Math.max(0, amount - 10);
+    if (teamAlive(side).some(h => [1006, 1024, 1030].includes(baseCardId(h)) && (h.sourceReduceUntil || 0) >= game.turn)) amount = Math.max(0, amount - 10);
     // メルの被ダメージ半減（攻撃されるごとに30%）
-    if (target.id === 1008 && roll(.3)) {
+    if (baseCardId(target) === 1008 && roll(.3)) {
         amount = Math.ceil(amount / 2); log('メル「レッサーパンチ」：ダメージ半減');
     }
     return amount;
@@ -98,10 +98,10 @@ function sourceOnMagnet(target, event, initiator = null, neighbors = null) {
         if (wounded) heal(wounded, 10);
     }
     if (hasField(side, 1003)) for (const n of (neighbors || enemyAdjacent(target))) sourceTrue(null, n, 5, 'エレナ「連鎖電界」', false);
-    if (initiator?.id === 1001 && roll(.3) && target.hp > 0) magnet(target, 1, false);
+    if (baseCardId(initiator) === 1001 && roll(.3) && target.hp > 0) magnet(target, 1, false);
 }
 function sourceOnDebuff(target) {
-    const side = 1 - ownerOf(target), v = field(side).find(x => x.id === 1021);
+    const side = 1 - ownerOf(target), v = field(side).find(x => baseCardId(x) === 1021);
     if (v) { const pool = field(ownerOf(target)); if (pool.length) sourceTrue(v, pool[rand(pool.length)], 5, 'ヴェイン「アビサルヴェノム」'); }
 }
 function sourceGiveCombustion(target) {
@@ -119,8 +119,8 @@ function sourceOnCombustion(target) {
 function sourceOnHit(actor, target, amount, options) {
     const side = ownerOf(target), source = ownerOf(actor);
     if (source === side) return;
-    if (hasField(side, 1007)) sourceTrue(field(side).find(x => x.id === 1007), actor, 10, '立華つむぎ「金遁の術」');
-    if (target.id === 1009) sourceTrue(target, actor, 5, 'ヴァネッサ「挑発の重盾」');
+    if (hasField(side, 1007)) sourceTrue(field(side).find(x => baseCardId(x) === 1007), actor, 10, '立華つむぎ「金遁の術」');
+    if (baseCardId(target) === 1009) sourceTrue(target, actor, 5, 'ヴァネッサ「挑発の重盾」');
 }
 function sourceAdjacentHit(actor, target, n, label, neighbors = null, skillBased = true) {
     const side = ownerOf(actor), spread = n + (skillBased && hasField(side, 1016) ? 5 : 0);
@@ -134,14 +134,14 @@ function sourceAfterNormal(actor, target) {
     if (hasField(side, 1000) && roll(.5)) {
         const enemies = field(1 - side); if (enemies.length) magnet(enemies[rand(enemies.length)], 1, false);
     }
-    if (actor.id === 1014 && target.hp > 0 && roll(.3)) sourceAdjacentHit(actor, target, 5, 'ピスカ「ルアーボム」', null, false);
-    if (actor.id === 1035 && roll(.3)) buff(actor, 'speed', 10, 1);
+    if (baseCardId(actor) === 1014 && target.hp > 0 && roll(.3)) sourceAdjacentHit(actor, target, 5, 'ピスカ「ルアーボム」', null, false);
+    if (baseCardId(actor) === 1035 && roll(.3)) buff(actor, 'speed', 10, 1);
 }
 function sourceAfterAttack(actor, target, amount, options) {
     const side = ownerOf(actor);
     if (hasField(side, 1018) && target.hp > 0) { buff(target, 'attack', -10, 0); }
     if (hasField(side, 1033) && game.players[side].attacks >= 2) {
-        const mm = field(side).find(x => x.id === 1033);
+        const mm = field(side).find(x => baseCardId(x) === 1033);
         if (mm && claim(mm, 'chainRadar')) {
             const a = field(1 - side); if (a.length) sourceTrue(mm, a[rand(a.length)], 5, 'メイメイ「チェインレーダー」');
         }
@@ -150,7 +150,7 @@ function sourceAfterAttack(actor, target, amount, options) {
 function sourceOnEndAction(h) { }
 function sourceOnSkillCast(h, t) {
     const side = ownerOf(h);
-    const iris = field(side).find(a => a.id === 1012 && a.hp > 0);
+    const iris = field(side).find(a => baseCardId(a) === 1012 && a.hp > 0);
     if (!iris) return;
     // ハイドロバーンは同一ターン中に何度技を使っても+10のまま（重複加算しない）。
     for (const a of field(side)) {
@@ -164,14 +164,14 @@ function sourceEndRound() {
     for (let s = 0; s < 2; s++)if (hasField(s, 1034) && game.players[s].attacks >= 3) game.players[s].adjustedOlgaBoost = true;
 }
 function sourceManualSkill(h, i, target) {
-    const sk = HERO_MAP[h.id].skills[i];
+    const sk = HERO_MAP[baseCardId(h)].skills[i];
     game.manualPending = { actorUid: h.uid, skillName: sk.name, description: sk.desc, targetUid: target?.uid || h.uid, consumeAction: true };
     log(`${h.name}「${sk.name}」：手動裁定をお願いします`);
     return true;
 }
 async function restoredSkillEffect(h, i, t) {
     if (i !== 0) return sourceManualSkill(h, i, t);
-    const side = ownerOf(h), id = h.id, skill = HERO_MAP[id].skills[0], en = field(1 - side), team = teamAlive(side);
+    const side = ownerOf(h), id = baseCardId(h), skill = HERO_MAP[id].skills[0], en = field(1 - side), team = teamAlive(side);
     const hit = async (p, b = 0, who = t, opts = {}) => who && who.hp > 0 ? damage(h, who, opts.trueOnly ? 0 : p, opts.trueOnly ? p + b : b, { name: skill.name, ...opts }) : 0;
     const trueHit = async (p, who = t) => hit(p, 0, who, { trueOnly: true });
     switch (id) {
