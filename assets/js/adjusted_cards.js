@@ -366,7 +366,9 @@ function enemy1100MagnetOverflow(target) {
     const side=1-ownerOf(target);
     if(enemy1100Alive(side,1104))for(const ally of game.players[side].team.filter(x=>x.hp>0))heal(ally,10);
     if(enemy1100Has(side,1103)){
-        for(const x of enemyAdjacent(target)){magnet(x,1,false);enemy1100True(null,x,10,'エレナ「連鎖電界」');}
+        const lineup=game.planned?.[ownerOf(target)]||game.players[ownerOf(target)].field,index=lineup.indexOf(target.uid);
+        const adjacent=[lineup[index-1],lineup[index+1]].filter(Boolean).map(uid=>game.players[ownerOf(target)].team.find(x=>x.uid===uid&&x.hp>0)).filter(Boolean);
+        for(const x of adjacent){magnet(x,1,false);enemy1100True(null,x,10,'エレナ「連鎖電界」');}
     }
 }
 function enemy1100MagnetBurst(target,amount,initiator,neighbors) {
