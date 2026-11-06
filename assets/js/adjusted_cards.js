@@ -304,8 +304,8 @@ function enemy1100DefenseTrigger(side) { if(enemy1100Has(side,1113))for(const al
 function enemy1100DamageReduce(actor,target,amount) {
     if(!target)return amount;
     const side=ownerOf(target);
-    if((target.halfDamageUntil||0)>=game.turn) amount=Math.ceil(amount/2);
-    if((target.skillDamageReduceUntil||-1)>=game.turn) amount=Math.max(0,amount-10);
+    if((target.halfDamageUntil||0)>=game.turn){amount=Math.ceil(amount/2);enemy1100DefenseTrigger(side);}
+    if((target.skillDamageReduceUntil||-1)>=game.turn){amount=Math.max(0,amount-10);enemy1100DefenseTrigger(side);}
     return amount;
 }
 function enemy1100OnSkillCast(actor,target) {
