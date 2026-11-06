@@ -135,7 +135,7 @@ async function handleAction(el) {
             config.mode='ai';config.picks[1]=formation.ids.slice();config.aiDifficulty='hard';challengeRunLevel='challenge2';challengeRunStage=stage;plannedChoices=[];startMatch();challengeRunStage=null;challengeRunLevel='challenge1';
             config.mode=previous.mode;config.aiDifficulty=previous.aiDifficulty;config.picks[1]=previous.enemyPicks;saveConfig();return;
         }
-        case 'challenge2Reset': if(confirm('チャレンジLv.2の突破状況をすべてリセットしますか？')){saveChallenge2Progress({completed:[]});render();}return;
+        case 'challenge2Reset': if(confirm('チャレンジLv.2の突破状況をすべてリセットしますか？')){saveChallenge2Progress({completed:[]},true);render();}return;
         case 'challengeReset': if (confirm('チャレンジLv.1の突破状況をすべてリセットしますか？')) { saveChallenge1Progress({ completed: [] }, { replace: true }); render(); } return;
         case 'new': if (game && game.phase !== 'ended' && !confirm('進行中の対戦を終了し、新規対戦を作成しますか？')) return; game = null; localStorage.removeItem(LSKEY); config.view = 'battle'; selected = null; plannedChoices = []; passPending = false; config.showDetails = null; config.editorSide = null; render(); return;
         case 'again': plannedChoices = []; startMatch(); return;
