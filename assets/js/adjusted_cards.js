@@ -320,17 +320,21 @@ function enemy1100OnHit(actor,target) {
 }
 async function enemy1100AfterNormal(actor,target) {
     const side=ownerOf(actor),id=baseCardId(actor),foes=field(1-side);
-    if(enemy1100Has(side,1100)&&foes.length){
+    if(enemy1100Has(side,1100)&&foes.length&&claim(actor,'enemy1100MagnetSpread')){
         const count=2+rand(2);
         for(const x of shuffled(foes).slice(0,Math.min(count,foes.length)))magnet(x,1,false);
     }
-    if(id===1135){
+    if(id===1135&&claim(actor,'enemy1135Boost')){
         if(roll(.5)){buff(actor,'speed',10,1);if(foes.length)enemy1100True(actor,foes[rand(foes.length)],10,'エマ「オーバーブースト」');}
     }
-    if(id===1132&&roll(.5)&&target&&target.hp>0&&!actor.enemyExtraNormal){
+    if(id===1132&&claim(actor,'enemy1132Extra')&&roll(.5)&&target&&target.hp>0&&!actor.enemyExtraNormal){
         actor.enemyExtraNormal=true;
         log('ビスコット「ストリングエアショー」：追加通常攻撃');
-        for(let i=0;i<3&&target.hp>0;i++)await awaitEnemyNormalHit(actor,target);
+        const count=actor.combo35?3:1;
+        for(let i=0;i<count&&target.hp>0;i++){
+            const power=actor.combo35?Math.round(stat(actor,'attack')*.35/10)*10:stat(actor,'attack');
+            await damage(actor,target,power,0,{normal:true,name:'追加通常攻撃'});
+        }
         actor.enemyExtraNormal=false;
     }
 }
@@ -380,7 +384,10 @@ function enemy1100OnDirectDamage(target,amount,reason) {
     if(!target||amount<=0||/レイジアンカー/.test(reason||''))return;
     const side=1-ownerOf(target),source=field(side).find(x=>baseCardId(x)===1115);
     if(!source)return;
-    for(const adjacent of enemyAdjacent(target).slice())enemy1100True(source,adjacent,10,'リオ「レイジアンカー」');
+    const lineup=game.planned?.[ownerOf(target)]||game.players[ownerOf(target)].field;
+    const index=lineup.indexOf(target.uid);
+    const adjacent=[lineup[index-1],lineup[index+1]].filter(Boolean).map(uid=>game.players[ownerOf(target)].team.find(x=>x.uid===uid&&x.hp>0)).filter(Boolean);
+    for(const unit of adjacent)enemy1100True(source,unit,10,'リオ「レイジアンカー」');
 }
 function enemy1100Combustion(target) {
     const side=1-ownerOf(target);
