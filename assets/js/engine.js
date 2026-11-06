@@ -402,6 +402,7 @@ function aiTarget(actor,type,pool,diff){
  })[0]
 }
 function aiSkillScore(actor,skill,side,target,diff){
+ function c2DebilitatedForAI(x){return !!(x&&(x.burn||x.poison||x.sleep||x.confusion||x.charm||x.combustion||statDebuff(x)))}
  const tx=aiSkillText(skill);let v=0,dm=tx.match(/(\d+)\s*(?:ダメージ|のダメージ)/);
  if(dm)v+=Number(dm[1])*.8;
  if(/攻撃|ダメージ|斬|撃|砲|弾/.test(tx))v+=18+stat(actor,'attack')*.12;
@@ -413,6 +414,25 @@ function aiSkillScore(actor,skill,side,target,diff){
   if(/回復|治療|HP\s*[＋+]|HPを.*回復/.test(tx))v+=Math.min(target.maxHp-target.hp,60)*.75-8;
   if(/状態異常.*(回復|解除)|(回復|解除|治療).*(やけど|どく|ねむり|こんらん|みりょう|状態異常)/.test(tx))v+=aiStatusValue(target)*.9;
  }else if(target&&/(即死|撃破|戦闘不能)/.test(tx)&&target.hp<=40)v+=80;
+ const id=baseCardId(actor), foes=field(1-side), allies=field(side);
+ if(id===1200&&foes.some(x=>x.marks<3))v+=18;
+ if(id===1201&&foes.some(x=>x.marks>0))v+=55;
+ if(id===1203&&foes.filter(x=>x.marks>0).length>=2)v+=50;
+ if(id===1204&&allies.some(x=>x.hp<x.maxHp-35))v+=35;
+ if(id===1205&&target?.marks>0)v+=35;
+ if(id===1208&&foes.length&&target?.hp<=90)v+=35;
+ if(id===1210&&target&&ownerOf(target)===side&&target.hp<target.maxHp-35)v+=30;
+ if(id===1213&&stat(actor,'defense')>=60)v+=25;
+ if((id===1214||id===1215)&&foes.length>=2)v+=25;
+ if(id===1217&&foes.length>=3)v+=35;
+ if(id===1219&&target&&HERO_MAP[target.id]?.skills?.length)v+=20;
+ if(id===1220&&target&&c2DebilitatedForAI(target))v+=35;
+ if(id===1222&&target)v+=20;
+ if(id===1223&&target&&c2DebilitatedForAI(target))v+=55;
+ if(id===1225&&target?.combustion)v+=35;
+ if(id===1226&&foes.length>=2)v+=35;
+ if(id===1227&&target?.combustion)v+=50;
+ if(id===1234&&game.players[side].attacks>0)v+=35;
  const pay=getPayment(side,skill);v-=Math.max(0,(pay?.length||0)-1)*3;
  if(diff==='hard'&&target&&ownerOf(target)!==side)v+=aiThreatScore(target)*.08;
  return v
@@ -420,9 +440,12 @@ function aiSkillScore(actor,skill,side,target,diff){
 
 function pickAiLineup(side){let p=game.players[side],prev=p.field,c=alive(side).slice(),forced=c.filter(h=>h.tauntTurn===game.turn);
  const counterTeam=c.some(h=>baseCardId(h)>=1006&&baseCardId(h)<=1011);
+ const challenge2Team=c.some(h=>h.id>=1200&&h.id<=1235);
+ const c2Ranks={1200:95,1201:100,1202:90,1203:85,1204:80,1205:75,1206:90,1207:100,1208:95,1209:85,1210:80,1211:75,1212:95,1213:90,1214:85,1215:90,1216:75,1217:80,1218:90,1219:100,1220:95,1221:85,1222:80,1223:90,1224:90,1225:100,1226:90,1227:95,1228:75,1229:85,1230:95,1231:100,1232:90,1233:85,1234:80,1235:85};
  c.sort((a,b)=>{let base=x=>(prev.includes(x.uid)?20:0)+x.hp/8+stat(x,'speed')/3;
- if(aiDifficulty()==='easy')return base(b)-base(a);
+ if(aiDifficulty()==='easy'&&!challenge2Team)return base(b)-base(a);
  let score=x=>base(x)-aiStatusValue(x)*.18+(aiDifficulty()==='hard'?aiThreatScore(x)*.25:0);
+ if(challenge2Team){score=x=>base(x)-aiStatusValue(x)*.18+(aiDifficulty()==='hard'?aiThreatScore(x)*.25:0)+(c2Ranks[baseCardId(x)]||0);}
  if(counterTeam){
   const rank=x=>({1008:100,1006:90,1009:80,1007:70,1010:60,1011:50}[baseCardId(x)]||0);
   const grave=game.players[side].graveyard?.length||0;
