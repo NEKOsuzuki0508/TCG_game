@@ -177,3 +177,12 @@ for (let i = CHALLENGE1_CARDS.length - 1; i >= 0; i--) {
 
 CHALLENGE1_CARDS.push(...correctedCards);
 CARD_DATA = CARD_DATA.map(c => CHALLENGE1_CARDS.find(x => x.id === c.id) || c);
+
+// 敵専用カードは元カードの能力・効果を引き継ぎ、IDだけ1100番台に分離する。
+const CHALLENGE1_ENEMY_CARDS = CHALLENGE1_CARDS.map(c => ({
+    ...c,
+    id: c.id + 100,
+    baseId: c.id
+}));
+CARD_DATA = CARD_DATA.filter(c => !CHALLENGE1_ENEMY_CARDS.some(enemy => enemy.id === c.id));
+CARD_DATA.push(...CHALLENGE1_ENEMY_CARDS);
