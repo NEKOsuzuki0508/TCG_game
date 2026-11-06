@@ -486,7 +486,7 @@ function nextActor() {
   const maximum = Math.max(...all.map(a => stat(a.unit, 'speed'))), high = all.filter(a => stat(a.unit, 'speed') === maximum); let chosen = high[rand(high.length)];
   let h = chosen.unit, s = chosen.side;
   if (h.skipNextAction > 0) { h.skipNextAction--; h.acted = true; log(`${h.name}は効果により行動できない`); return nextActor() }
-  if (h.combustion > 0) { const burnDamage=h.combustionDamage||10; h.combustion = 0; h.combustionDamage=0; if (typeof sourceOnCombustion === 'function') sourceOnCombustion(h); if(typeof enemy1100Combustion==='function')enemy1100Combustion(h); directDamage(null, h, burnDamage, '燃焼の継続ダメージ', false); if (h.hp <= 0) { h.acted = true; if (processDeathQueue()) return; return nextActor() } }
+  if (h.combustion > 0) { const burnDamage=h.combustionDamage||10; h.combustion = 0; h.combustionDamage=0; if (typeof sourceOnCombustion === 'function') sourceOnCombustion(h); if(typeof enemy1100Combustion==='function')enemy1100Combustion(h); if(typeof challenge2Combustion==='function')challenge2Combustion(h); directDamage(null, h, burnDamage, '燃焼の継続ダメージ', false); if (h.hp <= 0) { h.acted = true; if (processDeathQueue()) return; return nextActor() } }
   if (h.sleep && traitNameOf(h) === 'そろそろ起きなきゃ') h.sleep = Math.max(0, h.sleep - 1); else if (h.sleep) { h.sleep = Math.max(0, h.sleep - 1); h.acted = true; log(`${h.name}はねむりで行動できない`); return nextActor() }
   if (h.poison && !roll(Math.pow(.9, h.poison))) { h.acted = true; log(`${h.name}の行動はどくで失敗`); return nextActor() }
   officialTraitAtAction(h); if (game.phase === 'ended') return;
