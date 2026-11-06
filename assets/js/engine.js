@@ -370,7 +370,7 @@ function aiThreatScore(enemy){
 }
 function aiTarget(actor,type,pool,diff){
  if(!pool.length)return null;
- if(type==='enemy' && actor && actor.id>=1012 && actor.id<=1017 && pool.length===3) return pool[1];
+ if(type==='enemy' && actor && baseCardId(actor)>=1012 && baseCardId(actor)<=1017 && pool.length===3) return pool[1];
  if(diff==='easy')return type==='self'?actor:type==='ally'?pool.slice().sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:type==='any'?pool[rand(pool.length)]:pool.slice().sort((a,b)=>a.hp-b.hp)[0];
  const side=ownerOf(actor),ally=type==='ally'||(type==='any'&&pool.some(x=>ownerOf(x)===side));
  if(type==='self')return actor;
@@ -403,9 +403,9 @@ function pickAiLineup(side){let p=game.players[side],prev=p.field,c=alive(side).
  if(aiDifficulty()==='easy')return base(b)-base(a);
  let score=x=>base(x)-aiStatusValue(x)*.18+(aiDifficulty()==='hard'?aiThreatScore(x)*.25:0);
  if(counterTeam){
-  const rank=x=>({1008:100,1006:90,1009:80,1007:70,1010:60,1011:50}[x.id]||0);
+  const rank=x=>({1008:100,1006:90,1009:80,1007:70,1010:60,1011:50}[baseCardId(x)]||0);
   const grave=game.players[side].graveyard?.length||0;
-  score=x=>scoreBase(x)+rank(x)+(x.id===1011?grave*18:0);
+  score=x=>scoreBase(x)+rank(x)+(baseCardId(x)===1011?grave*18:0);
   function scoreBase(x){return base(x)-aiStatusValue(x)*.18+(aiDifficulty()==='hard'?aiThreatScore(x)*.25:0)}
  }
  return score(b)-score(a)});
@@ -518,7 +518,7 @@ function burnGroup(side) { return field(side).filter(h => h.burn > 0) }
 function canAttack(h) { return !!h && h.hp > 0 }
 // 36人×2技をカード本文に従って解決。
 async function skillEffect(h, i, t) {
-  let s = ownerOf(h), f = field(s), en = field(1 - s), id = h.id, shot = async (p, bonus = 0) => { if (t && t.hp > 0) await doHit(h, t, p, bonus, HERO_MAP[id].skills[i].name) };
+  let s = ownerOf(h), f = field(s), en = field(1 - s), id = baseCardId(h), shot = async (p, bonus = 0) => { if (t && t.hp > 0) await doHit(h, t, p, bonus, HERO_MAP[id].skills[i].name) };
   if (id <= 91) return await executeImportedSkill(h, i, t);
   if (typeof restoredSkillEffect === 'function' && typeof RESTORED_IDS !== 'undefined' && RESTORED_IDS.has(id)) return await restoredSkillEffect(h, i, t);
   if (id >= 1000 && id <= 1035) return sourceManualSkill(h, i, t);
