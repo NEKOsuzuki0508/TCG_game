@@ -346,7 +346,7 @@ async function awaitEnemyNormalHit(actor,target) {
 }
 function enemy1100AfterAttack(actor,target,amount,options) {
     const side=ownerOf(actor),id=baseCardId(actor);
-    if(enemy1100Has(side,1118)&&target&&target.hp>0){buff(target,'attack',-10,0);buff(target,'defense',-10,0);}
+    if(enemy1100Has(side,1118)&&target&&target.hp>0&&claim(actor,'enemy1118Debuff')){buff(target,'attack',-10,0);buff(target,'defense',-10,0);}
     if(id===1127&&target&&target.combustion)enemy1100True(actor,target,15,'イグナ「連鎖爆炎」');
     if(enemy1100Has(side,1131)&&game.players[side].attacks>=2&&target&&target.hp>0)enemy1100True(actor,target,20,'ギャビー「グリルファング」');
     if(enemy1100Has(side,1133)&&game.players[side].attacks>=2&&claim(field(side).find(x=>baseCardId(x)===1133)||actor,'enemy1133Chain')){
@@ -457,7 +457,7 @@ async function enemy1100SkillEffect(h,i,t) {
     case 1131: await hit(t,stat(h,'attack'));if(game.players[side].attacks>1&&t.hp>0)fixed(t,30,'ソニックストライク追加');break;
     case 1132: for(let k=0;k<3&&t&&t.hp>0;k++)await hit(t,30+k*15);break;
     case 1133: await hit(t,stat(h,'attack'));if(t.hp>0)fixed(t,game.players[side].attacks*10,'ソニックブレット追撃');break;
-    case 1134:{const prior=game.players[side].attacks>1;for(const x of foes.slice()){await hit(x,40);if(prior&&x.hp>0)fixed(x,20,'クラスターボム追加');}break;}
+    case 1134:{const prior=game.players[side].attacks>0;for(const x of foes.slice()){await hit(x,40);if(prior&&x.hp>0)fixed(x,20,'クラスターボム追加');}break;}
     case 1135:{const count=game.players[side].attacks>=3?3:2;for(let k=0;k<count&&t&&t.hp>0;k++)await hit(t,40);break;}
     default:return true;
     }
