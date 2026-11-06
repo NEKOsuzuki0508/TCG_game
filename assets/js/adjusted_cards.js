@@ -298,6 +298,7 @@ function enemy1100StatBonus(h,s) {
     }
     return n;
 }
+function enemy1100RawAttackBonus(actor) { return Number(actor?.attackDamageBonus||0); }
 function enemy1100DamageReduce(actor,target,amount) {
     if(!target)return amount;
     const side=ownerOf(target);
