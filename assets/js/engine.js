@@ -8,6 +8,14 @@ const FORMATIONS = [
   { key: 'burn', name: '空軍｜燃焼', ids: [1024, 1025, 1026, 1027, 1028, 1029], color: '#ff8e7b' },
   { key: 'combo', name: '空軍｜通常攻撃・連撃', ids: [1030, 1031, 1032, 1033, 1034, 1035], color: '#f9dc79' }
 ];
+const CHALLENGE2_FORMATIONS = [
+  { key:'counter', name:'陸軍｜反撃', ids:[1206,1207,1208,1209,1210,1211] },
+  { key:'spread', name:'海軍｜拡散', ids:[1212,1213,1214,1215,1216,1217] },
+  { key:'burn', name:'空軍｜燃焼', ids:[1224,1225,1226,1227,1228,1229] },
+  { key:'status', name:'海軍｜状態異常', ids:[1218,1219,1220,1221,1222,1223] },
+  { key:'mag', name:'陸軍｜磁気波動', ids:[1200,1201,1202,1203,1204,1205] },
+  { key:'combo', name:'空軍｜通常攻撃・連撃', ids:[1230,1231,1232,1233,1234,1235] }
+];
 const SUPPORTS = ['いずみのみず', 'にがいお茶', 'つちのかたまり', 'かみなりのたね', 'かんぽうゼリー', '流れる魔力', '止められた魔力', 'まほうの甲冑', 'ひらめきの一手', 'ヒメアオホノカ', '市販結界装置'];
 const HERO_MAP = Object.fromEntries(CARD_DATA.map(c => [c.id, c]));
 const TARG = { 1100:['enemy'],1101:['enemy'],1102:['enemy'],1103:['enemy'],1104:['ally'],1105:['enemy'],1106:['enemy'],1107:['enemy'],1108:['enemy'],1109:['enemy'],1110:['ally'],1111:['enemy'],1112:['enemy'],1113:['enemy'],1114:['enemy'],1115:['enemy'],1116:['enemy'],1117:['none'],1118:['enemy'],1119:['enemy'],1120:['enemy'],1121:['enemy'],1122:['enemy'],1123:['enemy'],1124:['enemy'],1125:['enemy'],1126:['none'],1127:['enemy'],1128:['ally'],1129:['enemy'],1130:['enemy'],1131:['enemy'],1132:['enemy'],1133:['enemy'],1134:['none'],1135:['enemy'], 1000: ['enemy'], 1001: ['enemy'], 1002: ['enemy'], 1003: ['enemy'], 1004: ['ally'], 1005: ['enemy'], 1006: ['enemy'], 1007: ['enemy'], 1008: ['enemy'], 1009: ['enemy'], 1010: ['ally'], 1011: ['enemy'], 1012: ['enemy'], 1013: ['enemy'], 1014: ['enemy'], 1015: ['enemy'], 1016: ['enemy'], 1017: ['none'], 1018: ['enemy'], 1019: ['enemy'], 1020: ['enemy'], 1021: ['enemy'], 1022: ['enemy'], 1023: ['enemy'], 1024: ['enemy'], 1025: ['enemy'], 1026: ['none'], 1027: ['enemy'], 1028: ['ally'], 1029: ['enemy'], 1030: ['enemy'], 1031: ['enemy'], 1032: ['enemy'], 1033: ['enemy'], 1034: ['none'], 1035: ['enemy'] };
@@ -29,6 +37,11 @@ const LSKEY = 'tcg_vivid_state_v2';
 const CHALLENGE1_PROGRESS_KEY = 'tcg_challenge1_progress_v1';
 const CHALLENGE1_ORDER = ['counter', 'spread', 'burn', 'status', 'mag', 'combo'];
 let challengeRunStage = null;
+let challengeRunLevel = 'challenge1';
+const CHALLENGE2_PROGRESS_KEY = 'tcg_challenge2_progress_v1';
+const CHALLENGE2_ORDER = ['counter','spread','burn','status','mag','combo'];
+function getChallenge2Progress(){try{const x=JSON.parse(localStorage.getItem(CHALLENGE2_PROGRESS_KEY)||'null');const a=Array.isArray(x?.completed)?x.completed.filter(n=>Number.isInteger(n)&&n>=0&&n<6):[];return {completed:[...new Set(a)].sort((a,b)=>a-b)}}catch(_){return {completed:[]}}}
+function saveChallenge2Progress(p){const clean={completed:[...new Set((p.completed||[]).filter(n=>Number.isInteger(n)&&n>=0&&n<6))].sort((a,b)=>a-b)};try{localStorage.setItem(CHALLENGE2_PROGRESS_KEY,JSON.stringify(clean))}catch(_){}return clean}
 let challengeCloudRevision = null;
 let challengeCloudReady = false;
 let challengeCloudQueue = Promise.resolve();
@@ -169,11 +182,11 @@ function makePlayer(side) {
 }
 function draw(side, n = 1) { let p = game.players[side]; for (let i = 0; i < n; i++) { if (!p.deck.length) { if (!p.discard.length) break; p.deck = shuffled(p.discard); p.discard = []; log(`${side ? '赤' : '青'}：捨て札を山札へシャッフル`) } p.hand.push(p.deck.pop()) } }
 function searchDeck(side, fn) { let deck = game.players[side].deck, idx = deck.findIndex(fn); if (idx < 0) return false; let card = deck.splice(idx, 1)[0]; game.players[side].hand.push(card); game.players[side].deck = shuffled(deck); log(`${side ? '赤' : '青'}：山札から${card}を獲得`); return true }
-function buff(h, stat, amount, next = 1) { h.buffs.push({ stat, amount, until: game.turn + next }); if (amount < 0 && typeof sourceOnDebuff === 'function') sourceOnDebuff(h); if(amount<0&&typeof enemy1100OnDebuff==='function')enemy1100OnDebuff(h) }
+function buff(h, stat, amount, next = 1) { h.buffs.push({ stat, amount, until: game.turn + next }); if (amount < 0 && typeof sourceOnDebuff === 'function') sourceOnDebuff(h); if(amount<0&&typeof enemy1100OnDebuff==='function')enemy1100OnDebuff(h); if(amount<0&&typeof challenge2OnDebuff==='function')challenge2OnDebuff(h) }
 function stat(h, s) {
   let b = s === 'attack' ? h.baseA : s === 'defense' ? h.baseD : h.baseS; b += h.buffs.filter(x => x.stat === s && x.until >= game.turn).reduce((a, x) => a + x.amount, 0);
   if (s === 'defense' && baseCardId(h) === 1029 && others(ownerOf(h)).some(e => e.combustion)) b += 10;
-  if (typeof sourceStatBonus === 'function') b += (sourceStatBonus(h, s) || 0); if(typeof enemy1100StatBonus==='function')b+=(enemy1100StatBonus(h,s)||0);
+  if (typeof sourceStatBonus === 'function') b += (sourceStatBonus(h, s) || 0); if(typeof enemy1100StatBonus==='function')b+=(enemy1100StatBonus(h,s)||0); if(typeof challenge2StatBonus==='function')b+=(challenge2StatBonus(h,s)||0);
   if (s === 'attack') b += officialTraitAttackBonus(h);
   if (s === 'defense') b += officialTraitDefenseBonus(h);
   if (s === 'speed') b += officialTraitSpeedBonus(h);
@@ -187,7 +200,7 @@ function enemyAdjacent(t) { let f = field(ownerOf(t)), i = f.findIndex(h => h.ui
 function heal(h, n) { if (!h || h.hp <= 0) return; let prev = h.hp; h.hp = Math.min(h.maxHp, h.hp + n); if (h.hp > prev) log(`＋ ${h.name} HP ${prev} → ${h.hp}`) }
 function magnet(h, n = 1, skillOrigin = true) { if (!h || h.hp <= 0) return; let count = typeof enemy1100MagnetCount === 'function' ? enemy1100MagnetCount(h,n) : n; if (skillOrigin && typeof hasField === 'function' && hasField(1 - ownerOf(h), 1002) && roll(.5)) { count++; log('ルネ「蒼雷華」：磁気波動を1枚追加'); } for (let i = 0; i < count; i++) { if (h.marks < 3) { h.marks++; log(`⚡ ${h.name}に磁気波動（${h.marks}/3）`); if(typeof enemy1100MagnetApplied==='function')enemy1100MagnetApplied(h) } else { const side = 1 - ownerOf(h), bonus = ((typeof hasField === 'function' && hasField(side, 1001)) ? 5 : 0) + ((typeof hasField === 'function' && hasField(side, 1010)) ? 5 : 0) + ((typeof enemy1100Has==='function' && enemy1100Has(side,1101)) ? 10 : 0) + ((typeof enemy1100Has==='function' && enemy1100Has(side,1110)) ? 10 : 0); directDamage(null, h, 15 + bonus, '磁気波動の超過', false); if(typeof enemy1100MagnetOverflow==='function')enemy1100MagnetOverflow(h) } } }
 function burst(h, n, initiator = null, neighbors = null) { if (!h || h.hp <= 0) return; let amt = Math.min(h.marks, n || h.marks); h.marks -= amt; if (amt) { const adjacent = (neighbors || enemyAdjacent(h).slice()); const side = 1 - ownerOf(h), enemyBoost = typeof enemy1100Has==='function' && enemy1100Has(side,1101), base = enemyBoost ? 30 : 20, bonus = ((typeof hasField === 'function' && hasField(side, 1001)) ? 5 : 0) + ((typeof hasField === 'function' && hasField(side, 1010)) ? 5 : 0) + ((typeof enemy1100Has==='function' && enemy1100Has(side,1110)) ? 10 : 0); log(`⚡ ${h.name}の磁気波動${amt}枚が炸裂`); directDamage(null, h, (base + bonus) * amt, '磁気波動の炸裂', false); if(typeof enemy1100MagnetBurst==='function')enemy1100MagnetBurst(h,amt,initiator,adjacent); if (typeof sourceOnMagnet === 'function') sourceOnMagnet(h, 'burst', initiator, adjacent) } }
-function ailment(h, kind) { if (!h || h.hp <= 0) return; if (kind === 'burn' || kind === 'poison') { h[kind]++; log(`状態異常：${h.name}に${kind === 'burn' ? 'やけど' : 'どく'} ${h[kind]}`) } else if (kind === 'charm') { h.charm = Math.max(1, h.charm || 0); log(`状態異常：${h.name}にみりょう`) } else { h[kind] = Math.max(h[kind], kind === 'sleep' ? 2 : 3); log(`状態異常：${h.name}に${kind === 'sleep' ? 'ねむり' : 'こんらん'}`) } if (typeof sourceOnDebuff === 'function') sourceOnDebuff(h); if(typeof enemy1100OnDebuff==='function')enemy1100OnDebuff(h) }
+function ailment(h, kind) { if (!h || h.hp <= 0) return; if (kind === 'burn' || kind === 'poison') { h[kind]++; log(`状態異常：${h.name}に${kind === 'burn' ? 'やけど' : 'どく'} ${h[kind]}`) } else if (kind === 'charm') { h.charm = Math.max(1, h.charm || 0); log(`状態異常：${h.name}にみりょう`) } else { h[kind] = Math.max(h[kind], kind === 'sleep' ? 2 : 3); log(`状態異常：${h.name}に${kind === 'sleep' ? 'ねむり' : 'こんらん'}`) } if (typeof sourceOnDebuff === 'function') sourceOnDebuff(h); if(typeof enemy1100OnDebuff==='function')enemy1100OnDebuff(h); if(typeof challenge2OnDebuff==='function')challenge2OnDebuff(h) }
 function cure(h) { for (let k of ['sleep', 'burn', 'poison', 'confusion', 'charm']) if (h[k] > 0) { h[k] = k === 'sleep' ? 0 : h[k] - 1; log(`治療：${h.name}の状態異常を1つ解除`); return true } return false }
 function nextShield(h, n) { h.nextIn.push(n) }
 function extraAttack(h, n) { h.nextOut.push(n) }
@@ -235,7 +248,7 @@ function updateHp(h, val) { if (!h || !game) return; let wasAlive = h.hp > 0, ol
 function directDamage(attacker, target, amount, reason = '確定ダメージ', isAttack = false) {
   if (!target || target.hp <= 0) return 0; if (attacker) target = forceTauntTarget(attacker, target); if (!target || target.hp <= 0) return 0; let dmg = amount; if(dmg>0&&(target.skillDamageReduceUntil||-1)>=game.turn){dmg=Math.max(0,dmg-10);if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target));}
   if (isAttack) { dmg = applyDefencesSync(attacker, target, dmg, reason) }
-  dmg = Math.max(0, dmg); if (dmg) { let hp = target.hp; updateHp(target, -dmg); log(`${reason}：${target.name}に${dmg}ダメージ（${hp}→${target.hp}）`); if(typeof enemy1100OnDirectDamage==='function')enemy1100OnDirectDamage(target,dmg,reason) } if (!waiting && !game.pendingDeathTraits?.length) checkVictory(); return dmg
+  dmg = Math.max(0, dmg); if (dmg) { let hp = target.hp; updateHp(target, -dmg); log(`${reason}：${target.name}に${dmg}ダメージ（${hp}→${target.hp}）`); if(typeof enemy1100OnDirectDamage==='function')enemy1100OnDirectDamage(target,dmg,reason); if(typeof challenge2OnDirectDamage==='function')challenge2OnDirectDamage(target,dmg,reason) } if (!waiting && !game.pendingDeathTraits?.length) checkVictory(); return dmg
 }
 function applyDefencesSync(attacker, target, damage, reason) { if (attacker && ownerOf(attacker) !== ownerOf(target) && target.immuneTurn === game.turn) { log(`${target.name}は敵の攻撃を受けない状態のため「${reason}」を無効化`); if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target)); return 0 } if ((target.nextCommercialBarrier || 0) > 0) { target.nextCommercialBarrier--; if ((game.currentSkillSpecial || []).includes('やみ')) { damage = Math.ceil(damage / 2); if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target)); log(`市販結界装置：${target.name}へのやみカード攻撃を半減（${damage}ダメージ）`) } else { log(`市販結界装置：${target.name}への次の攻撃を防いだ`); if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target)); return 0 } } if (target.shieldTurn === game.turn) { log(`${target.name}は「まほうの甲冑」で無効化`); if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target)); return 0 } if ((target.nextBarrier || 0) > 0) { target.nextBarrier--; log(`防御：${target.name}が次の攻撃をシールドで無効化`); if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target)); return 0 } if (target.nextHalf > 0) { target.nextHalf--; damage = Math.ceil(damage / 2); if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target)) } if (target.nextIn.length) { damage = Math.max(0, damage - target.nextIn.shift()); if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target)) } return damage }
 function estimateAttackBonus(actor, target, side) { let next = actor.nextOut.slice(); let value = rawAttackBonus(actor, target, side); actor.nextOut = next; return value }
@@ -259,7 +272,7 @@ async function damage(actor, target, power, bonusTrue = 0, options = {}) {
   const completelyBlocked = target.immuneTurn === game.turn || target.shieldTurn === game.turn || (target.nextBarrier || 0) > 0 || (target.nextCommercialBarrier || 0) > 0;
   amount = applyDefencesSync(actor, target, amount, options.name || '攻撃');
   if (typeof sourceDamageReduce === 'function') amount = sourceDamageReduce(actor, target, amount) || 0;
-  if(typeof enemy1100DamageReduce==='function')amount=enemy1100DamageReduce(actor,target,amount);
+  if(typeof enemy1100DamageReduce==='function')amount=enemy1100DamageReduce(actor,target,amount); if(typeof challenge2DamageReduce==='function')amount=challenge2DamageReduce(actor,target,amount);
   amount = officialTraitDamageReduce(actor, target, amount, options);
   if (minimumHit && !completelyBlocked && amount < 10) {
     log(`確定10保証：${target.name}への軽減後ダメージ${amount} → 10（完全無効化以外では残る）`);
@@ -272,7 +285,7 @@ async function damage(actor, target, power, bonusTrue = 0, options = {}) {
   if (amount > 0) {
     target.flags.attackedTurn = game.turn; target.lastAttackedTurn = game.turn;
     if (typeof sourceOnHit === 'function') sourceOnHit(actor, target, amount, options);
-    if(typeof enemy1100OnHit==='function')enemy1100OnHit(actor,target,amount,options);
+    if(typeof enemy1100OnHit==='function')enemy1100OnHit(actor,target,amount,options); if(typeof challenge2OnHit==='function')challenge2OnHit(actor,target,amount,options);
     officialTraitOnHit(actor, target, amount, options);
     // 攻撃から派生する被弾・反撃を処理（追撃が反撃を再誘発しない）
     if (target.flags.counterReady) { target.flags.counterReady = false; counter(target, actor, 20, '反撃の準備') }
@@ -280,8 +293,8 @@ async function damage(actor, target, power, bonusTrue = 0, options = {}) {
   // 多段追撃の実行（ここでのダメージは攻撃回数に含めない）
 
   if (options.normal && typeof sourceAfterNormal === 'function') await sourceAfterNormal(actor, target);
-  if(options.normal && typeof enemy1100AfterNormal==='function')await enemy1100AfterNormal(actor,target);
-  if (typeof sourceAfterAttack === 'function') sourceAfterAttack(actor, target, amount, options); if(typeof enemy1100AfterAttack==='function')enemy1100AfterAttack(actor,target,amount,options); officialTraitAfterAttack(actor, target, options);
+  if(options.normal && typeof enemy1100AfterNormal==='function')await enemy1100AfterNormal(actor,target); if(options.normal&&typeof challenge2AfterNormal==='function')await challenge2AfterNormal(actor,target);
+  if (typeof sourceAfterAttack === 'function') sourceAfterAttack(actor, target, amount, options); if(typeof enemy1100AfterAttack==='function')enemy1100AfterAttack(actor,target,amount,options); if(typeof challenge2AfterAttack==='function')challenge2AfterAttack(actor,target,amount,options); officialTraitAfterAttack(actor, target, options);
   if (target.hp === 0 || originalTarget.hp === 0) checkVictory();
   return amount;
 }
@@ -301,7 +314,7 @@ function getPayment(side, skill) {
   return best ? usedSpecial.concat(best.idx) : null
 }
 function consume(side, payment) { let p = game.players[side]; payment.slice().sort((a, b) => b - a).forEach(i => p.discard.push(...p.hand.splice(i, 1))); }
-function dropRoundFlags() { for (let p of game.players) { p.assistUsed = false; p.attacks = 0; p.mpMod = 0; for (let h of p.team) { h.acted = false; h.flags = {}; h.buffs = h.buffs.filter(x => x.until >= game.turn) } } game.counterThisTurn = [0, 0] }
+function dropRoundFlags() { for (let p of game.players) { p.assistUsed = false; p.attacks = 0; p.c2MeimeiTriggered=false; p.mpMod = 0; for (let h of p.team) { h.acted = false; h.flags = {}; h.buffs = h.buffs.filter(x => x.until >= game.turn) } } game.counterThisTurn = [0, 0] }
 function checkVictory() {
   if (!game || game.phase === 'ended') return false; if (game.pendingDeathTraits?.length || game.manualPending?.deathTrigger) return false; let a = alive(0).length, b = alive(1).length;
   if (!a || !b) { finish(!a && !b ? -1 : (!a ? 1 : 0)); return true } return false
@@ -315,13 +328,17 @@ function finish(winner) {
     game.challenge.progressRecorded = true;
     log(`チャレンジ1「${FORMATIONS.find(f => f.key === game.challenge.formation)?.name || '編成戦'}」を突破！`);
   }
+  if (game.challenge?.id === 'challenge2' && winner === 0 && !game.challenge.progressRecorded) {
+    const progress=getChallenge2Progress(); progress.completed.push(game.challenge.stage); saveChallenge2Progress(progress); game.challenge.progressRecorded=true;
+    log(`チャレンジ2「${CHALLENGE2_FORMATIONS.find(f=>f.key===game.challenge.formation)?.name||'強化編成'}」を突破！`);
+  }
   log(winner < 0 ? '引き分け' : `${winner === 0 ? '青' : '赤'}側の勝利！`); render(); persist()
 }
 function startMatch() {
-  game = { mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy', challenge: Number.isInteger(challengeRunStage) ? { id: 'challenge1', stage: challengeRunStage, formation: CHALLENGE1_ORDER[challengeRunStage], progressRecorded: false } : null, phase: 'select', turn: 0, players: [makePlayer(0), makePlayer(1)], log: [], counterThisTurn: [0, 0], planned: [null, null], currentSelectSide: 0, order: [], current: null, winner: null, pendingDeathTraits: [], actionNameCharLog: [], lastSkillSpecial: [], lastSkillNameBySide: [], lastSpecialUsedBySide: [[], []] };
+  game = { mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy', challenge: Number.isInteger(challengeRunStage) ? { id: challengeRunLevel, stage: challengeRunStage, formation: (challengeRunLevel==='challenge2'?CHALLENGE2_ORDER:CHALLENGE1_ORDER)[challengeRunStage], progressRecorded: false } : null, phase: 'select', turn: 0, players: [makePlayer(0), makePlayer(1)], log: [], counterThisTurn: [0, 0], planned: [null, null], currentSelectSide: 0, order: [], current: null, winner: null, pendingDeathTraits: [], actionNameCharLog: [], lastSkillSpecial: [], lastSkillNameBySide: [], lastSpecialUsedBySide: [[], []] };
   for (let side = 0; side < 2; side++) { if (validateDeckArray(deckSlots[side])) log(`${side ? '赤' : '青'}：保存済みの60枚カスタムデッキを使用`); draw(side, 5); }
   for (let side = 0; side < 2; side++)for (let h of game.players[side].team) { let tr = HERO_MAP[h.id]?.traitEffect; if (tr === 'opening_draw') draw(side, 1) }
-  if (typeof sourceStartMatch === 'function') sourceStartMatch(); if(typeof enemy1100StartMatch==='function')enemy1100StartMatch();
+  if (typeof sourceStartMatch === 'function') sourceStartMatch(); if(typeof enemy1100StartMatch==='function')enemy1100StartMatch(); if(typeof challenge2StartMatch==='function')challenge2StartMatch();
   beginRound(); config.view = 'battle'; render()
 }
 function beginRound() { if (checkVictory()) return; game.turn++; game.phase = 'select'; game.planned = [null, null]; game.currentSelectSide = 0; game.current = null; selected = null; dropRoundFlags(); for (let p of game.players) for (let h of p.team) { h.turnStartHp = h.hp; h.damageTakenThisTurn = 0; h.acted = false } for (let side = 0; side < 2; side++)draw(side, 2); if (typeof sourceTurnStart === 'function') sourceTurnStart(); officialTraitTurnStart(); if (game.phase === 'ended') return; log(`━━ ターン${game.turn} 開始：各プレイヤー2枚ドロー`); persist() }
@@ -373,7 +390,7 @@ function aiThreatScore(enemy){
 }
 function aiTarget(actor,type,pool,diff){
  if(!pool.length)return null;
- if(type==='enemy' && actor && baseCardId(actor)>=1012 && baseCardId(actor)<=1017 && pool.length===3) return pool[1];
+ if(type==='enemy' && actor && ((baseCardId(actor)>=1012 && baseCardId(actor)<=1017)||(actor.id>=1212&&actor.id<=1217)) && pool.length===3) return pool[1];
  if(diff==='easy')return type==='self'?actor:type==='ally'?pool.slice().sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:type==='any'?pool[rand(pool.length)]:pool.slice().sort((a,b)=>a.hp-b.hp)[0];
  const side=ownerOf(actor),ally=type==='ally'||(type==='any'&&pool.some(x=>ownerOf(x)===side));
  if(type==='self')return actor;
@@ -415,7 +432,7 @@ function pickAiLineup(side){let p=game.players[side],prev=p.field,c=alive(side).
  return [...forced,...c.filter(h=>!forced.some(x=>x.uid===h.uid))].slice(0,3).map(h=>h.uid)}
 function onEnter(h) {
   const firstEntry = !h.entered; h.entered = true; h.enteredTurn = game.turn; let side = ownerOf(h); let tr = HERO_MAP[h.id]?.traitEffect;
-  if (typeof sourceOnEnter === 'function') sourceOnEnter(h, firstEntry); if(typeof enemy1100OnEnter==='function')enemy1100OnEnter(h,firstEntry); officialTraitOnEnter(h);
+  if (typeof sourceOnEnter === 'function') sourceOnEnter(h, firstEntry); if(typeof enemy1100OnEnter==='function')enemy1100OnEnter(h,firstEntry); if(typeof challenge2OnEnter==='function')challenge2OnEnter(h,firstEntry); officialTraitOnEnter(h);
   if (firstEntry && tr === 'enter_draw') draw(side, 1); if (firstEntry && tr === 'enter_shield') field(side).forEach(a => nextShield(a, 20)); if (firstEntry && tr === 'enter_heal') field(side).forEach(a => heal(a, 10));
   if ((typeof RESTORED_IDS !== 'undefined' && RESTORED_IDS.has(h.id)) || (baseCardId(h) >= 1000 && baseCardId(h) <= 1035)) return;
   switch (baseCardId(h)) { case 1000: for (let x of field(side)) nextShield(x, 20); log('ルネ：制御装甲、味方の次の被ダメージ−20'); break; case 1003: searchDeck(side, c => /^[123]MP$/.test(c)); break; case 1024: for (let x of field(side)) nextShield(x, 20); log('ノルシュ：灼熱防空が発動'); break; case 1026: h.nextHalf++; log('ルチル：次の被攻撃を半減'); break; case 1030: for (let x of field(side)) nextShield(x, 20); log('フローリア：風の編制が発動'); break; case 1033: draw(side, 1); log('シエンラ：機動通信で1枚引く'); break; }
@@ -423,7 +440,7 @@ function onEnter(h) {
 function officialTraitFormation(side) { const f = field(side); if (f.length !== 3) return; for (const h of f) { const tn = traitNameOf(h); if (tn === 'じつはリーダー') for (const x of f) buff(x, 'defense', 10, 0); if (tn === 'じつはサブリーダー') for (const x of f) buff(x, 'attack', 10, 0); if (tn === 'じつはむしょく' && !h.officialMaxHpBoosted) { for (const x of f) { x.maxHp += 10; x.hp = Math.min(x.maxHp, x.hp + 10) } h.officialMaxHpBoosted = true; log('とくせい「じつはむしょく」：味方全員の最大HP＋10') } } }
 function beginTurn() {
   game.phase = 'acting'; for (let s = 0; s < 2; s++) { let p = game.players[s], old = p.field.slice(); for (let h of p.team) h.wasInFieldPreviousTurn = old.includes(h.uid); p.field = game.planned[s].slice(); for (let h of field(s)) if (!old.includes(h.uid)) onEnter(h) }
-  if(typeof enemy1100TurnStart==='function')enemy1100TurnStart();
+  if(typeof enemy1100TurnStart==='function')enemy1100TurnStart(); if(typeof challenge2TurnStart==='function')challenge2TurnStart();
   // マリナ「完全解析」：そのターンの配置確定後、味方の防御が最も低い1人を強化する。
   for (let side = 0; side < 2; side++) {
     const marina = field(side).find(h => baseCardId(h) === 1013 && h.hp > 0);
@@ -454,7 +471,7 @@ function nextActor() {
   if (game.mode === 'ai' && s === 1) { game.actionBanner = { side: s, actorUid: h.uid, actorName: h.name, skillName: '行動を選択中…', description: 'AIが使用する技と対象を判断しています。', status: '思考中', resultLines: [] }; render(); persist(); setTimeout(() => takeAiAction(), AI_ACTION_DELAY_MS) } else { render(); persist() }
 }
 function endRound() {
-  if (typeof sourceEndRound === 'function') sourceEndRound(); if(typeof enemy1100EndRound==='function')enemy1100EndRound(); for (let s = 0; s < 2; s++) { let p = game.players[s]; for (let h of p.team) h.buffs = h.buffs.filter(b => b.until > game.turn) }
+  if (typeof sourceEndRound === 'function') sourceEndRound(); if(typeof enemy1100EndRound==='function')enemy1100EndRound(); if(typeof challenge2EndRound==='function')challenge2EndRound(); for (let s = 0; s < 2; s++) { let p = game.players[s]; for (let h of p.team) h.buffs = h.buffs.filter(b => b.until > game.turn) }
   // 戦闘終了条件：そのターン終了時、フィールド上の味方が全員倒れていた側が敗北。
   let lose0 = game.planned[0].every(uid => game.players[0].team.find(h => h.uid === uid)?.hp <= 0), lose1 = game.planned[1].every(uid => game.players[1].team.find(h => h.uid === uid)?.hp <= 0); if (lose0 || lose1) { finish(lose0 && lose1 ? -1 : lose0 ? 1 : 0); return }
   beginRound(); render()
@@ -501,7 +518,7 @@ async function actSkill(h, index, target) {
   if (target && skill.special.includes('やみ') && traitNameOf(target) === 'もんばん') { log(`とくせい：${target.name}「もんばん」がやみカードの効果を無効化`); rememberLastSkillUse(side, skill); game.actionBanner.status = '処理完了'; game.actionBanner.resultLines = game.log.slice(0, 6).reverse(); waiting = false; render(); persist(); await pause(ACTION_RESULT_DELAY_MS); endAction(h); return }
   if (target && skill.special.includes('水') && traitNameOf(target) === '地に足うまってる') { log(`とくせい：${target.name}「地に足うまってる」が水カードの効果を無効化`); rememberLastSkillUse(side, skill); game.actionBanner.status = '処理完了'; game.actionBanner.resultLines = game.log.slice(0, 6).reverse(); waiting = false; render(); persist(); await pause(ACTION_RESULT_DELAY_MS); endAction(h); return }
   if (skill.special.length) { for (let x of field(side)) if (baseCardId(x) === 1027 && claim(x, 'flameHeal')) heal(h, 10) }
-  if (typeof sourceOnSkillCast === 'function') sourceOnSkillCast(h, target); if(typeof enemy1100OnSkillCast==='function')enemy1100OnSkillCast(h,target);
+  if (typeof sourceOnSkillCast === 'function') sourceOnSkillCast(h, target); if(typeof enemy1100OnSkillCast==='function')enemy1100OnSkillCast(h,target); if(typeof challenge2OnSkillCast==='function')challenge2OnSkillCast(h,target);
   try { let manual = await skillEffect(h, index, target); if (manual) { rememberLastSkillUse(side, skill); if (game.actionBanner) game.actionBanner.status = '手動処理待ち'; waiting = false; render(); persist(); return } } catch (e) { console.error(e); log('効果処理にエラーが発生：' + e.message) }
   rememberLastSkillUse(side, skill); if (game.actionBanner?.actorUid === h.uid) { game.actionBanner.status = '処理完了'; game.actionBanner.resultLines = game.log.slice(0, 6).reverse(); render(); persist(); await pause(ACTION_RESULT_DELAY_MS) } waiting = false; endAction(h)
 }
@@ -510,7 +527,7 @@ function processDeathQueue() { if (!game || game.phase === 'ended' || game.manua
 function activateTrait(h) { if (!game || !h || h.hp <= 0 || !selectableTrait(h) || traitExhausted(h)) return; let c = HERO_MAP[h.id]; h.traitUses = Number(h.traitUses || 0) + 1; game.actionBanner = { side: ownerOf(h), actorUid: h.uid, actorName: h.name, skillName: 'とくせい：' + c.traitName, description: c.trait, status: '発動中', resultLines: [] }; game.actionNameCharLog = game.actionNameCharLog || []; game.actionNameCharLog.push({ side: ownerOf(h), length: kanaCount(c.traitName) }); log(`${h.name}：とくせい「${c.traitName}」を発動宣言`); if (h.id === 2) { for (let ally of field(ownerOf(h))) { let old = ally.hp; ally.hp = Math.max(ally.hp, Math.ceil(ally.maxHp / 2)); if (ally.hp > old) log(`とくせい：${ally.name} HP ${old} → ${ally.hp}`) } game.actionBanner.status = '処理完了'; game.actionBanner.resultLines = game.log.slice(0, 6).reverse(); render(); persist(); return } if (h.id === 5) { if (game.phase !== 'select' || !game.players[ownerOf(h)].field.includes(h.uid)) { h.traitUses = Math.max(0, h.traitUses - 1); alert('「いそぎのようじ」はターン開始時、フィールドにいる場合のみ発動できます。'); return } game.players[ownerOf(h)].field = []; if (typeof plannedChoices !== 'undefined') plannedChoices = []; log('いそぎのようじ：フィールドの仲間全員をベンチへ戻した'); game.actionBanner.status = '処理完了'; game.actionBanner.resultLines = game.log.slice(0, 6).reverse(); render(); persist(); return } game.manualPending = { actorUid: h.uid, skillName: 'とくせい：' + c.traitName, description: c.trait, targetUid: field(ownerOf(h))[0]?.uid || game.players[ownerOf(h)].team.find(x => x.hp > 0)?.uid || null, consumeAction: c.traitName === 'やまぶし', traitActivation: true, resumePhase: game.phase }; if (game.actionBanner) game.actionBanner.status = '手動処理待ち'; render(); persist() }
 function endAction(h) {
   if (!game || game.phase === 'ended') { render(); persist(); return } h.acted = true; h.actionNameCursor = (game.actionNameCharLog || []).length; if (typeof sourceOnEndAction === 'function') sourceOnEndAction(h);
-  if (h.marks > 0) burst(h);
+  if (h.marks > 0) { if(Array.isArray(h.c2Marks)&&h.c2Marks.length)challenge2Burst(h); else burst(h); }
   game.currentSkillSpecial = [];
   if (h.banSkills > 0) { h.banSkills = 0 } // 技封印は次の行動順終了で解除
   if (processDeathQueue()) return; if (!checkVictory()) nextActor(); render(); persist()
@@ -525,6 +542,7 @@ async function skillEffect(h, i, t) {
   let s = ownerOf(h), f = field(s), en = field(1 - s), id = baseCardId(h), shot = async (p, bonus = 0) => { if (t && t.hp > 0) await doHit(h, t, p, bonus, HERO_MAP[id].skills[i].name) };
   if (id <= 91) return await executeImportedSkill(h, i, t);
   if (id >= 1100 && id <= 1135 && typeof enemy1100SkillEffect === 'function') return await enemy1100SkillEffect(h,i,t);
+  if (id >= 1200 && id <= 1235 && typeof challenge2SkillEffect === 'function') return await challenge2SkillEffect(h,i,t);
   if (typeof restoredSkillEffect === 'function' && typeof RESTORED_IDS !== 'undefined' && RESTORED_IDS.has(id)) return await restoredSkillEffect(h, i, t);
   if (id >= 1000 && id <= 1035) return sourceManualSkill(h, i, t);
   if (!TARG[id]) return await executeImportedSkill(h, i, t);
