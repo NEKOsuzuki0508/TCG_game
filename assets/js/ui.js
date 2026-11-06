@@ -109,7 +109,7 @@ async function handleAction(el) {
             const formation = FORMATIONS.find(f => f.key === CHALLENGE1_ORDER[stage]);
             if (!formation) return;
             const previous = { mode: config.mode, aiDifficulty: config.aiDifficulty, enemyPicks: config.picks[1].slice() };
-            config.mode = 'ai'; config.picks[1] = formation.ids.slice(); config.aiDifficulty = 'hard';
+            config.mode = 'ai'; config.picks[1] = formation.ids.map(id => id + 100); config.aiDifficulty = 'hard';
             challengeRunStage = stage; plannedChoices = []; startMatch(); challengeRunStage = null;
             config.mode = previous.mode; config.aiDifficulty = previous.aiDifficulty; config.picks[1] = previous.enemyPicks; saveConfig(); return;
         }
