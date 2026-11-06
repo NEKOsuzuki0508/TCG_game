@@ -97,7 +97,6 @@ function challenge2StatBonus(h,s){
   let n=0;
   if(s==='attack'){
     if(c2Has(side,1201))n+=20;
-    if(h.id===1205&&foes.some(x=>x.marks>0))n-=10;
     if(c2Has(side,1205)&&h.marks>0)n-=10;
     if(c2Has(side,1207))n+=10;
     if(h.id===1211)n+=allies.filter(x=>x.hp<x.maxHp).length*10+(game.players[side].team.some(x=>x.hp<=0)?20:0);
