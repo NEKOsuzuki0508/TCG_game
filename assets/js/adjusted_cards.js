@@ -227,7 +227,7 @@ function enemy1100True(actor,target,n,label) {
     const side=actor?ownerOf(actor):1-ownerOf(target);
     const spreadBonus=/(拡散|アクアスピア|インパクトスプレッド|レイジアンカー)/.test(label||'')&&enemy1100Has(side,1116)?10:0;
     const bonus=(enemy1100Has(side,1110)?10:0)+spreadBonus;
-    return directDamage(actor,target,n+bonus,label||'確定ダメージ',false);
+    return directDamage(null,target,n+bonus,label||'確定ダメージ',false);
 }
 function enemy1100HasAilment(h) { return !!(h.burn||h.poison||h.sleep||h.confusion||h.charm); }
 function enemy1100Debilitated(h) { return enemy1100HasAilment(h)||statDebuff(h); }
