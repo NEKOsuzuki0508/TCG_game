@@ -133,7 +133,7 @@ function challenge2DefenseTrigger(side){
   if(c2Has(side,1213))for(const x of teamAlive(side))x.attackDamageBonus=(x.attackDamageBonus||0)+10;
 }
 function challenge2OnHit(actor,target,amount,options){
-  if(!actor||!target||amount<=0)return;
+  if(!actor||!target||amount<=0||ownerOf(actor)===ownerOf(target))return;
   const side=ownerOf(target);
   if(c2Has(side,1207))c2True(null,actor,20,'立華つむぎ「金遁の術」');
   if(target.id===1209)c2True(null,actor,10,'ヴァネッサ「挑発の重盾」');
