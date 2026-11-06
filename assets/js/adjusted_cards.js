@@ -225,7 +225,8 @@ function enemy1100Enemies(side) { return field(1-side); }
 function enemy1100True(actor,target,n,label) {
     if(!target||target.hp<=0)return 0;
     const side=actor?ownerOf(actor):1-ownerOf(target);
-    const bonus=enemy1100Has(side,1110)?10:0;
+    const spreadBonus=/(拡散|アクアスピア|インパクトスプレッド|レイジアンカー)/.test(label||'')&&enemy1100Has(side,1116)?10:0;
+    const bonus=(enemy1100Has(side,1110)?10:0)+spreadBonus;
     return directDamage(actor,target,n+bonus,label||'確定ダメージ',false);
 }
 function enemy1100Debilitated(h) { return !!(h.burn||h.poison||h.sleep||h.confusion||h.charm||h.combustion||statDebuff(h)); }
@@ -317,7 +318,7 @@ function enemy1100OnHit(actor,target) {
     if(enemy1100Has(side,1107))enemy1100True(null,actor,20,'立華つむぎ「金遁の術」');
     if(baseCardId(target)===1109)enemy1100True(target,actor,10,'ヴァネッサ「挑発の重盾」');
 }
-function enemy1100AfterNormal(actor,target) {
+async function enemy1100AfterNormal(actor,target) {
     const side=ownerOf(actor),id=baseCardId(actor),foes=field(1-side);
     if(enemy1100Has(side,1100)&&foes.length){
         const count=2+rand(2);
@@ -329,7 +330,7 @@ function enemy1100AfterNormal(actor,target) {
     if(id===1132&&roll(.5)&&target&&target.hp>0&&!actor.enemyExtraNormal){
         actor.enemyExtraNormal=true;
         log('ビスコット「ストリングエアショー」：追加通常攻撃');
-        for(let i=0;i<3&&target.hp>0;i++)awaitEnemyNormalHit(actor,target);
+        for(let i=0;i<3&&target.hp>0;i++)await awaitEnemyNormalHit(actor,target);
         actor.enemyExtraNormal=false;
     }
 }
@@ -339,9 +340,17 @@ async function awaitEnemyNormalHit(actor,target) {
 }
 function enemy1100AfterAttack(actor,target,amount,options) {
     const side=ownerOf(actor),id=baseCardId(actor);
-    if(enemy1100Has(side,1133)&&game.players[side].attacks>=2){
+    if(enemy1100Has(side,1118)&&target&&target.hp>0){buff(target,'attack',-10,0);buff(target,'defense',-10,0);}
+    if(id===1127&&target&&target.combustion)enemy1100True(actor,target,15,'イグナ「連鎖爆炎」');
+    if(enemy1100Has(side,1131)&&game.players[side].attacks>=2&&target&&target.hp>0)enemy1100True(actor,target,20,'ギャビー「グリルファング」');
+    if(enemy1100Has(side,1133)&&game.players[side].attacks>=2&&claim(field(side).find(x=>baseCardId(x)===1133)||actor,'enemy1133Chain')){
         const pool=field(1-side);if(pool.length)enemy1100True(actor,pool[rand(pool.length)],15,'メイメイ「チェインレーダー」');
     }
+}
+function enemy1100OnDebuff(target) {
+    if(!target||target.hp<=0)return;
+    const side=1-ownerOf(target),source=field(side).find(x=>baseCardId(x)===1121);
+    if(source){const pool=field(ownerOf(target));if(pool.length)enemy1100True(source,pool[rand(pool.length)],10,'ヴェイン「アビサルヴェノム」');}
 }
 function enemy1100MagnetApplied(target) {
     const side=1-ownerOf(target);
@@ -366,6 +375,12 @@ function enemy1100MagnetCount(target,count) {
     const side=1-ownerOf(target);
     if(enemy1100Has(side,1102)&&roll(.6)){log('ルネ「蒼雷華」：磁気波動を1枚追加');return count+1;}
     return count;
+}
+function enemy1100OnDirectDamage(target,amount,reason) {
+    if(!target||amount<=0||/レイジアンカー/.test(reason||''))return;
+    const side=1-ownerOf(target),source=field(side).find(x=>baseCardId(x)===1115);
+    if(!source)return;
+    for(const adjacent of enemyAdjacent(target).slice())enemy1100True(source,adjacent,10,'リオ「レイジアンカー」');
 }
 function enemy1100Combustion(target) {
     const side=1-ownerOf(target);
@@ -406,7 +421,7 @@ async function enemy1100SkillEffect(h,i,t) {
     }
     case 1105: if(t.marks>0)await hit(t,100,0,{trueOnly:true});else await hit(t,100);break;
     case 1106: await hit(t,90);break;
-    case 1107: await hit(t,stat(h,'attack'));if(t.hp>0&&t.hp<t.maxHp*.5)fixed(t,30,'リベンジスラッシュ追加');break;
+    case 1107:{const wasBelow=t.hp<t.maxHp*.5;await hit(t,stat(h,'attack'));if(wasBelow&&t.hp>0)fixed(t,30,'リベンジスラッシュ追加');break;}
     case 1108:{const x=foes.slice().sort((a,b)=>a.hp-b.hp)[0];if(x){await hit(x,80);if(x.hp>0)fixed(x,20,'スナイプリベンジ追加');}break;}
     case 1109: await hit(t,stat(h,'defense'));if(wasAttacked(h))fixed(t,30,'カウンターブラスト追加');break;
     case 1110:{const prev=(t.flags.lastHitTurn||0)===game.turn-1;heal(t,prev?50:30);break;}
