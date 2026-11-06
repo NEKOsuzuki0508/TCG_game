@@ -229,7 +229,7 @@ function enemy1100True(actor,target,n,label) {
     const bonus=(enemy1100Has(side,1110)?10:0)+spreadBonus;
     return directDamage(actor,target,n+bonus,label||'確定ダメージ',false);
 }
-function enemy1100Debilitated(h) { return !!(h.burn||h.poison||h.sleep||h.confusion||h.charm||h.combustion||statDebuff(h)); }
+function enemy1100Debilitated(h) { return !!(h.burn||h.poison||h.sleep||h.confusion||h.charm||statDebuff(h)); }
 function enemy1100GiveBurn(target) {
     if(!target||target.hp<=0||target.combustion)return false;
     target.combustion=1; target.combustionDamage=15;
@@ -415,7 +415,7 @@ async function enemy1100SkillEffect(h,i,t) {
     case 1103: await hit(t,60);for(const x of field(1-side).slice())if(x.marks>0)burst(x);break;
     case 1104:{
         for(const x of allies)heal(x,30);
-        const cureTarget=allies.slice().sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0];if(cureTarget)cure(cureTarget);
+        const cureTarget=allies.filter(x=>x.sleep||x.burn||x.poison||x.confusion||x.charm).sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]||allies[0];if(cureTarget)cure(cureTarget);
         const pool=field(1-side);if(pool.length)magnet(pool[rand(pool.length)]);
         break;
     }
