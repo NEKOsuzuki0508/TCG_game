@@ -252,7 +252,7 @@ function enemy1100OnEnter(h,firstEntry) {
     if(!firstEntry)return;
     const id=baseCardId(h),side=ownerOf(h);
     if([1106,1124,1130].includes(id)){
-        for(const ally of field(side)) ally.halfDamageUntil=Math.max(ally.halfDamageUntil||0,game.turn+1);
+        for(const ally of teamAlive(side)) ally.halfDamageUntil=Math.max(ally.halfDamageUntil||0,game.turn+1);
         log(h.name+'：味方全体の被ダメージを2ターン半減');
     }
 }
@@ -267,7 +267,7 @@ function enemy1100TurnStart() {
             const pool=foes.filter(x=>!x.combustion);
             if(pool.length)enemy1100GiveBurn(pool[rand(pool.length)]);
         }
-        if(enemy1100Has(side,1113)) for(const x of field(side))buff(x,'defense',10,0);
+        if(enemy1100Has(side,1113)) for(const x of teamAlive(side))buff(x,'defense',10,0);
         if(enemy1100Has(side,1130)&&roll(.5))searchDeck(side,c=>/^[123]MP$/.test(c));
         const player=game.players[side];
         if(player.enemy1100OlgaMP){
@@ -308,9 +308,9 @@ function enemy1100DamageReduce(actor,target,amount) {
 }
 function enemy1100OnSkillCast(actor,target) {
     const side=ownerOf(actor);
-    if(enemy1100Has(side,1106)) for(const ally of field(side)) ally.skillDamageReduceUntil=game.turn;
+    if(enemy1100Has(side,1106)) for(const ally of teamAlive(side)) ally.skillDamageReduceUntil=game.turn;
     if(enemy1100Has(side,1112)){
-        for(const ally of field(side))buff(ally,'defense',10,0);
+        for(const ally of teamAlive(side))buff(ally,'defense',10,0);
         if(target&&target.hp>0)buff(target,'attack',-10,0);
     }
 }
