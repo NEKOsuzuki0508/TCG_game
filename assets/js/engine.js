@@ -324,7 +324,7 @@ function startMatch() {
   if (typeof sourceStartMatch === 'function') sourceStartMatch(); if(typeof enemy1100StartMatch==='function')enemy1100StartMatch();
   beginRound(); config.view = 'battle'; render()
 }
-function beginRound() { if (checkVictory()) return; game.turn++; game.phase = 'select'; game.planned = [null, null]; game.currentSelectSide = 0; game.current = null; selected = null; dropRoundFlags(); for (let p of game.players) for (let h of p.team) { h.turnStartHp = h.hp; h.damageTakenThisTurn = 0; h.acted = false } for (let side = 0; side < 2; side++)draw(side, 2); if (typeof sourceTurnStart === 'function') sourceTurnStart(); if(typeof enemy1100TurnStart==='function')enemy1100TurnStart(); officialTraitTurnStart(); if (game.phase === 'ended') return; log(`━━ ターン${game.turn} 開始：各プレイヤー2枚ドロー`); persist() }
+function beginRound() { if (checkVictory()) return; game.turn++; game.phase = 'select'; game.planned = [null, null]; game.currentSelectSide = 0; game.current = null; selected = null; dropRoundFlags(); for (let p of game.players) for (let h of p.team) { h.turnStartHp = h.hp; h.damageTakenThisTurn = 0; h.acted = false } for (let side = 0; side < 2; side++)draw(side, 2); if (typeof sourceTurnStart === 'function') sourceTurnStart(); officialTraitTurnStart(); if (game.phase === 'ended') return; log(`━━ ターン${game.turn} 開始：各プレイヤー2枚ドロー`); persist() }
 function commitSelection(side, uidList) {
   if (!uidList || uidList.length < 1 || uidList.length > 3) return alert('1〜3人を選択してください。');
   if (uidList.some(uid => !alive(side).some(h => h.uid === uid))) return alert('選択に誤りがあります');
@@ -423,6 +423,7 @@ function onEnter(h) {
 function officialTraitFormation(side) { const f = field(side); if (f.length !== 3) return; for (const h of f) { const tn = traitNameOf(h); if (tn === 'じつはリーダー') for (const x of f) buff(x, 'defense', 10, 0); if (tn === 'じつはサブリーダー') for (const x of f) buff(x, 'attack', 10, 0); if (tn === 'じつはむしょく' && !h.officialMaxHpBoosted) { for (const x of f) { x.maxHp += 10; x.hp = Math.min(x.maxHp, x.hp + 10) } h.officialMaxHpBoosted = true; log('とくせい「じつはむしょく」：味方全員の最大HP＋10') } } }
 function beginTurn() {
   game.phase = 'acting'; for (let s = 0; s < 2; s++) { let p = game.players[s], old = p.field.slice(); for (let h of p.team) h.wasInFieldPreviousTurn = old.includes(h.uid); p.field = game.planned[s].slice(); for (let h of field(s)) if (!old.includes(h.uid)) onEnter(h) }
+  if(typeof enemy1100TurnStart==='function')enemy1100TurnStart();
   // マリナ「完全解析」：そのターンの配置確定後、味方の防御が最も低い1人を強化する。
   for (let side = 0; side < 2; side++) {
     const marina = field(side).find(h => baseCardId(h) === 1013 && h.hp > 0);
