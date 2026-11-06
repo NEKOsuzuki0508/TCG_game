@@ -42,7 +42,37 @@ let challengeRunLevel = 'challenge1';
 const CHALLENGE2_PROGRESS_KEY = 'tcg_challenge2_progress_v1';
 const CHALLENGE2_ORDER = ['counter','spread','burn','status','mag','combo'];
 function getChallenge2Progress(){try{const x=JSON.parse(localStorage.getItem(CHALLENGE2_PROGRESS_KEY)||'null');const a=Array.isArray(x?.completed)?x.completed.filter(n=>Number.isInteger(n)&&n>=0&&n<6):[];return {completed:[...new Set(a)].sort((a,b)=>a-b)}}catch(_){return {completed:[]}}}
-function saveChallenge2Progress(p){const clean={completed:[...new Set((p.completed||[]).filter(n=>Number.isInteger(n)&&n>=0&&n<6))].sort((a,b)=>a-b)};try{localStorage.setItem(CHALLENGE2_PROGRESS_KEY,JSON.stringify(clean))}catch(_){}return clean}
+let challenge2CloudRevision=null,challenge2CloudReady=false,challenge2CloudQueue=Promise.resolve();
+function cleanChallenge2Progress(p){const a=Array.isArray(p?.completed)?p.completed.filter(n=>Number.isInteger(n)&&n>=0&&n<6):[];return {completed:[...new Set(a)].sort((a,b)=>a-b)}}
+function writeChallenge2ProgressLocal(p){const clean=cleanChallenge2Progress(p);try{localStorage.setItem(CHALLENGE2_PROGRESS_KEY,JSON.stringify(clean))}catch(_){}return clean}
+async function syncChallenge2ProgressFromCloud(){
+ if(!accountUser||typeof accountGetChallengeProgress!=='function')return;
+ challenge2CloudReady=false;
+ try{
+  const remote=await accountGetChallengeProgress('challenge2');challenge2CloudRevision=Number.isSafeInteger(remote.revision)?remote.revision:0;
+  if(remote.data&&typeof remote.data==='object'&&Array.isArray(remote.data.completed))writeChallenge2ProgressLocal(remote.data);
+  else{const local=getChallenge2Progress();if(local.completed.length){const saved=await accountSaveChallengeProgress('challenge2',local,challenge2CloudRevision);challenge2CloudRevision=saved.revision;}}
+  challenge2CloudReady=true;
+ }catch(error){challenge2CloudReady=false;console.warn('チャレンジLv.2進行状況のクラウド取得に失敗しました。',error);accountNotice='チャレンジLv.2進行状況をクラウドから取得できませんでした：'+error.message;}
+}
+function queueChallenge2CloudSave(progress,replace=false){
+ if(!accountUser||!challenge2CloudReady||typeof accountSaveChallengeProgress!=='function')return;
+ const snapshot=cleanChallenge2Progress(progress);
+ challenge2CloudQueue=challenge2CloudQueue.then(async()=>{
+  try{
+   if(challenge2CloudRevision===null){const current=await accountGetChallengeProgress('challenge2');challenge2CloudRevision=current.revision||0;}
+   let data=snapshot;
+   try{const saved=await accountSaveChallengeProgress('challenge2',data,challenge2CloudRevision);challenge2CloudRevision=saved.revision;}
+   catch(error){
+    if(error.status!==409)throw error;
+    const latest=await accountGetChallengeProgress('challenge2');challenge2CloudRevision=latest.revision||0;
+    if(!replace&&Array.isArray(latest.data?.completed)){data=cleanChallenge2Progress({completed:latest.data.completed.concat(snapshot.completed)});writeChallenge2ProgressLocal(data);}
+    const saved=await accountSaveChallengeProgress('challenge2',data,challenge2CloudRevision);challenge2CloudRevision=saved.revision;
+   }
+  }catch(error){console.warn('チャレンジLv.2進行状況のクラウド保存に失敗しました。',error);accountNotice='チャレンジLv.2進行状況をクラウドに保存できませんでした：'+error.message;}
+ });
+}
+function saveChallenge2Progress(p,replace=false){const clean=writeChallenge2ProgressLocal(p);queueChallenge2CloudSave(clean,replace);return clean}
 let challengeCloudRevision = null;
 let challengeCloudReady = false;
 let challengeCloudQueue = Promise.resolve();
