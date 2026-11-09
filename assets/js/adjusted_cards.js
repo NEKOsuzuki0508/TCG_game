@@ -227,8 +227,9 @@ function enemy1100True(actor,target,n,label) {
     const side=actor?ownerOf(actor):1-ownerOf(target);
     const magneticBonus=/磁気波動/.test(label||'')&&enemy1100Has(side,1101)?10:0;
     const cedricBonus=enemy1100Alive(side,1110)?10:0;
+    const adelBonus=enemy1100Alive(side,1119)&&enemy1100Debilitated(target)?10:0;
     const spreadBonus=/(拡散|隣接|連鎖電界|アクアスピア|インパクトスプレッド|レイジアンカー|ギガディフュージョン)/.test(label||'')&&enemy1100Has(side,1116)?10:0;
-    return directDamage(null,target,n+magneticBonus+cedricBonus+spreadBonus,label||'確定ダメージ',false);
+    return directDamage(null,target,n+magneticBonus+cedricBonus+adelBonus+spreadBonus,label||'確定ダメージ',false);
 }
 function enemy1100HasAilment(h) { return !!(h&&(h.burn||h.poison||h.sleep||h.confusion||h.charm)); }
 function enemy1100Debilitated(h) { return enemy1100HasAilment(h)||statDebuff(h); }
