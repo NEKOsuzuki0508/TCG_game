@@ -310,7 +310,7 @@ async function damage(actor, target, power, bonusTrue = 0, options = {}) {
     amount = 10;
   }
   if (target.hp <= 0) return 0;
-  let before = target.hp; updateHp(target, -amount);
+  let before = target.hp; updateHp(target, -amount); if(ownerOf(actor)!==ownerOf(target))target.lastHitTurn=game.turn;
   log(`${actor.name}「${options.name || '攻撃'}」→ ${target.name}：${amount}ダメージ（${before}→${target.hp}）`);
   if (target.sleep && amount > 0) { target.sleep = 0; log(`${target.name}のねむりが解除された`) }
   if (amount > 0) {
