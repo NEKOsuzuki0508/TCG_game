@@ -214,7 +214,7 @@ async function challenge2SkillEffect(h,i,t){
     case 1206:await hit(t,90);break;
     case 1207:{const below=t.hp<t.maxHp*.5;await hit(t,stat(h,'attack'));if(below&&t.hp>0)fixed(t,30,'リベンジスラッシュ追加');break;}
     case 1208:{const x=foes.slice().sort((a,b)=>a.hp-b.hp)[0];if(x){await hit(x,80);if(x.hp>0)fixed(x,20,'スナイプリベンジ追加');}break;}
-    case 1209:await hit(t,stat(h,'defense'));if((h.damageTakenThisTurn||0)>0&&t.hp>0)fixed(t,30,'カウンターブラスト追加');break;
+    case 1209:await hit(t,stat(h,'defense'));if(h.lastHitTurn===game.turn&&t.hp>0)fixed(t,30,'カウンターブラスト追加');break;
     case 1210:{const prev=t.lastHitTurn===game.turn-1;heal(t,prev?50:30);break;}
     case 1211:{const fallen=game.players[side].team.filter(x=>x.hp<=0).length;await hit(t,stat(h,'attack'));if(fallen)fixed(t,fallen*20,'ファイナルリベンジ追加');break;}
     case 1212:await hit(t,90);break;
