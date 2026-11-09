@@ -70,7 +70,7 @@ function challenge2StartMatch(){
       log((team.some(h=>h.id===1200)?'ミヤ':'メル')+'：味方全員に開幕シールド・HP+50%');
     }
     if(team.some(h=>h.id===1214||h.id===1220||h.id===1226||h.id===1232))c2ShieldTeam(side);
-    if(team.some(h=>h.id===1202||h.id===1212||h.id===1218))for(const h of team)h.halfDamageUntil=game.turn+2;
+    if(team.some(h=>h.id===1202||h.id===1212||h.id===1218))for(const h of team)h.halfDamageUntil=game.turn+1;
     if(team.some(h=>h.id===1224))searchDeck(side,c=>/^[123]MP$/.test(c));
     for(const h of team)if(h.id>=1230&&h.id<=1235)h.combo35=true;
   }
@@ -88,7 +88,7 @@ function challenge2TurnStart(){
     const foes=field(1-side),allies=field(side);
     if(c2Has(side,1213))for(const x of allies)buff(x,'defense',10,0);
     if(c2Has(side,1219)&&foes.length)for(const x of shuffled(foes).slice(0,2)){buff(x,'attack',-10,0);buff(x,'defense',-10,0);}
-    if(c2Has(side,1225)){const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}
+    if(c2Has(side,1225)){const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)],25);}
     if(c2Has(side,1230)&&roll(.5))searchDeck(side,c=>/^[123]MP$/.test(c));
     if(game.players[side].c2OlgaDiscount){game.players[side].c2OlgaDiscount=false;game.players[side].mpMod-=1;log('オルガ「重爆撃陣形」：このターンの技コスト−1MP');}
   }
@@ -114,6 +114,7 @@ function challenge2StatBonus(h,s){
   }
   return n;
 }
+function challenge2DamageBonus(actor,target){return actor&&target&&c2Has(ownerOf(actor),1219)&&c2Debilitated(target)?15:0;}
 function challenge2DamageReduce(actor,target,amount){
   if(!target||amount<=0)return amount;
   let reduced=false;
@@ -135,6 +136,7 @@ function challenge2DefenseTrigger(side){
 }
 function challenge2OnHit(actor,target,amount,options){
   if(!actor||!target||amount<=0||ownerOf(actor)===ownerOf(target))return;
+  if(c2Has(ownerOf(actor),1215)&&/拡散|スプレッド|アクアスピア|インパクトスプレッド|ギガディフュージョン/.test(options?.name||''))for(const x of enemyAdjacent(target).slice())c2True(actor,x,15,'リオ「レイジアンカー」');
   const side=ownerOf(target);
   if(c2Has(side,1207))c2True(null,actor,20,'立華つむぎ「金遁の術」');
   if(target.id===1209)c2True(null,actor,10,'ヴァネッサ「挑発の重盾」');
@@ -148,12 +150,14 @@ async function challenge2AfterNormal(actor,target){
     const magneticDamage=Math.round(stat(actor,'attack')*.5);
     for(const x of shuffled(foes).slice(0,count))c2Mark(x,1,magneticDamage);
   }
-  if(actor.id===1232&&!actor.c2ExtraNormal&&target&&target.hp>0&&roll(.5)){
-    actor.c2ExtraNormal=true;log('ビスコット「ストリングエアショー」：追加通常攻撃');
-    for(let i=0;i<3&&target.hp>0;i++)await damage(actor,target,Math.round(stat(actor,'attack')*.35),0,{normal:true,name:'追加通常攻撃'});
-    actor.c2ExtraNormal=false;
+  if(actor.id===1232&&!actor.c2NormalTraitUsed&&!actor.c2ExtraNormalActive&&target&&target.hp>0){
+    actor.c2NormalTraitUsed=true;
+    if(roll(.5)){actor.c2ExtraNormalActive=true;log('ビスコット「ストリングエアショー」：追加通常攻撃');
+      for(let i=0;i<3&&target.hp>0;i++)await damage(actor,target,Math.round(stat(actor,'attack')*.35),0,{normal:true,name:'追加通常攻撃'});
+      actor.c2ExtraNormalActive=false;
+    }
   }
-  if(actor.id===1235&&roll(.5)){buff(actor,'speed',10,1);if(foes.length)c2True(actor,foes[rand(foes.length)],10,'エマ「オーバーブースト」');}
+  if(actor.id===1235&&!actor.c2EmmaTraitUsed){actor.c2EmmaTraitUsed=true;if(roll(.5)){buff(actor,'speed',10,1);if(foes.length)c2True(actor,foes[rand(foes.length)],10,'エマ「オーバーブースト」');}}
 }
 function challenge2AfterAttack(actor,target,amount,options){
   const side=ownerOf(actor);
