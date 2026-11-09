@@ -297,7 +297,7 @@ async function damage(actor, target, power, bonusTrue = 0, options = {}) {
   let base = options.trueOnly ? 0 : (minimumHit ? 10 : attackPower - defensePower);
   if (minimumHit) log(`最低ダメージ保証：${actor.name}の攻撃威力${attackPower} ≦ ${target.name}のぼうぎょ${defensePower} → 確定10ダメージ（完全無効化以外は軽減後も保証）`);
   if (typeof sourceExtraTrue === 'function') bonusTrue += sourceExtraTrue(actor, target, side, bonusTrue) || 0;
-  let amount = base + bonusTrue; if (options.trueOnly) amount = bonusTrue;
+  let amount = base + bonusTrue; if(typeof challenge2DamageBonus==='function')amount+=challenge2DamageBonus(actor,target)||0; if (options.trueOnly) amount = bonusTrue;
   game.players[side].attacks++;
   // 数値軽減を適用した後、攻撃を完全に防ぐ効果がなければ最低10ダメージを保証する。
   const completelyBlocked = target.immuneTurn === game.turn || target.shieldTurn === game.turn || (target.nextBarrier || 0) > 0 || (target.nextCommercialBarrier || 0) > 0;
@@ -551,7 +551,8 @@ async function takeAiAction() {
   if (chosen) await actSkill(h, chosen.i, t); else await actNormal(h, t);
 }
 async function actNormal(h, target) {
-  if (waiting || !target || h.hp <= 0) return; if (h.banAttackTurn === game.turn) { log(`${h.name}は攻撃制限中のため通常攻撃できない`); endAction(h); return } waiting = true; selected = null; let s = ownerOf(h); game.actionBanner = { side: s, actorUid: h.uid, actorName: h.name, skillName: '通常攻撃', description: 'コスト不要。こうげき値と相手のぼうぎょ値をもとにダメージを計算します。', status: '発動中', resultLines: [] }; log(`${s ? '赤' : '青'} ${h.name}：通常攻撃`); game.actionNameCharLog = game.actionNameCharLog || []; game.actionNameCharLog.push({ side: s, length: kanaCount('通常攻撃') }); render(); persist(); await pause(ACTION_REVEAL_DELAY_MS);
+  if (waiting || !target || h.hp <= 0) return;
+  h.c2NormalTraitUsed=false;h.c2ExtraNormalActive=false;h.c2EmmaTraitUsed=false; if (h.banAttackTurn === game.turn) { log(`${h.name}は攻撃制限中のため通常攻撃できない`); endAction(h); return } waiting = true; selected = null; let s = ownerOf(h); game.actionBanner = { side: s, actorUid: h.uid, actorName: h.name, skillName: '通常攻撃', description: 'コスト不要。こうげき値と相手のぼうぎょ値をもとにダメージを計算します。', status: '発動中', resultLines: [] }; log(`${s ? '赤' : '青'} ${h.name}：通常攻撃`); game.actionNameCharLog = game.actionNameCharLog || []; game.actionNameCharLog.push({ side: s, length: kanaCount('通常攻撃') }); render(); persist(); await pause(ACTION_REVEAL_DELAY_MS);
   const normalHit = async () => {
     let count = (baseCardId(h) >= 1030 && baseCardId(h) <= 1035) || h.combo35 || baseCardId(h)===1135 || HERO_MAP[h.id]?.traitEffect === 'triple35' ? 3 : 1, power = count === 3 ? Math.round(stat(h, 'attack') * .35) : stat(h, 'attack');
     for (let i = 0; i < count; i++) { if (target.hp <= 0) break; await damage(h, target, power, 0, { normal: true, name: '通常攻撃 ' + (count > 1 ? `${i + 1}/${count}` : '') }); if (game.phase === 'ended') break }
