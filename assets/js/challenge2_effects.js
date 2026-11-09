@@ -20,6 +20,7 @@ function c2GiveBurn(target){
   if(typeof challenge2OnDebuff==='function')challenge2OnDebuff(target);
   return true;
 }
+function c2MagneticPower(source){return source?Math.round(stat(source,'attack')*.5):20;}
 function c2Mark(target,count=1,power=20){
   if(!target||target.hp<=0)return;
   const side=1-ownerOf(target);
@@ -43,7 +44,7 @@ function challenge2MagnetChain(target){
   game.c2MagnetChainActive=true;
   try{
     const near=enemyAdjacent(target).slice();
-    for(const x of near){c2Mark(x,1,20);c2True(null,x,10,'エレナ「連鎖電界」');}
+    for(const x of near){c2Mark(x,1,c2MagneticPower(field(side).find(h=>h.id===1203)));c2True(null,x,10,'エレナ「連鎖電界」');}
   }finally{game.c2MagnetChainActive=false}
 }
 function challenge2Burst(target,initiator=null){
@@ -57,7 +58,7 @@ function challenge2Burst(target,initiator=null){
   }
   if(c2Alive(1-ownerOf(target),1204))c2HealTeam(1-ownerOf(target),10);
   challenge2MagnetChain(target);
-  if(initiator&&initiator.id===1201&&target.hp>0&&Math.random()<.5)c2Mark(target,1+Math.floor(Math.random()*2),20);
+  if(initiator&&initiator.id===1201&&target.hp>0&&Math.random()<.5)c2Mark(target,1+Math.floor(Math.random()*2),c2MagneticPower(initiator));
 }
 function challenge2StartMatch(){
   for(let side=0;side<2;side++){
@@ -189,11 +190,11 @@ async function challenge2SkillEffect(h,i,t){
   const hit=async(target,power,bonus=0,opts={})=>{if(target&&target.hp>0)await damage(h,target,power,bonus,{name:sk.name,...opts});};
   const fixed=(target,n,label=sk.name)=>c2True(h,target,n,label);
   switch(id){
-    case 1200:{await hit(t,80);const pool=field(1-side);for(let k=0;k<3&&pool.length;k++)c2Mark(pool[rand(pool.length)],1,20);break;}
+    case 1200:{await hit(t,80);const pool=field(1-side);for(let k=0;k<3&&pool.length;k++)c2Mark(pool[rand(pool.length)],1,c2MagneticPower(h));break;}
     case 1201:{let x=foes.filter(x=>x.marks>0).sort((a,b)=>b.marks-a.marks)[0]||t;for(let k=0;k<2&&x&&x.hp>0;k++)await hit(x,25);if(x&&x.hp>0)challenge2Burst(x,h);break;}
-    case 1202:await hit(t,90);if(t.hp>0)c2Mark(t,1,20);break;
+    case 1202:await hit(t,90);if(t.hp>0)c2Mark(t,1,c2MagneticPower(h));break;
     case 1203:await hit(t,60);for(const x of foes.slice())if(x.marks)challenge2Burst(x,h);break;
-    case 1204:{for(const x of allies)heal(x,30);const cureTarget=allies.find(x=>x.sleep||x.burn||x.poison||x.confusion||x.charm)||allies[0];if(cureTarget)cure(cureTarget);if(t&&t.hp>0)c2Mark(t,1,20);break;}
+    case 1204:{for(const x of allies)heal(x,30);const cureTarget=allies.find(x=>x.sleep||x.burn||x.poison||x.confusion||x.charm)||allies[0];if(cureTarget)cure(cureTarget);if(t&&t.hp>0)c2Mark(t,1,c2MagneticPower(h));break;}
     case 1205:await hit(t,100,0,{trueOnly:!!t.marks});break;
     case 1206:await hit(t,90);break;
     case 1207:{const below=t.hp<t.maxHp*.5;await hit(t,stat(h,'attack'));if(below&&t.hp>0)fixed(t,30,'リベンジスラッシュ追加');break;}
