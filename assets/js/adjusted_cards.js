@@ -286,9 +286,10 @@ function enemy1100TurnStart() {
             const drawn=searchDeck(side,c=>/^[123]MP$/.test(c));
             if(drawn)log('フローリア「風の調べ」：MPカードを1枚ドロー');
         }
-        if(player.enemy1100OlgaMP){
-            player.enemy1100OlgaMP=false;player.mpMod-=1;
-            log('オルガ「重爆撃陣形」：このターン、味方の技コスト−1MP');
+        if(player.enemy1100OlgaBoost){
+            player.enemy1100OlgaBoost=false;
+            for(const ally of teamAlive(side))buff(ally,'attack',10,0);
+            log('オルガ「重爆撃陣形」：このターン、味方全員のこうげき＋10');
         }
     }
 }
@@ -425,7 +426,7 @@ function enemy1100Combustion(target) {
     }
 }
 function enemy1100EndRound() {
-    for(let side=0;side<2;side++)if(enemy1100Has(side,1134)&&game.players[side].attacks>=3)game.players[side].enemy1100OlgaMP=true;
+    for(let side=0;side<2;side++)if(enemy1100Has(side,1134)&&game.players[side].attacks>=3)game.players[side].enemy1100OlgaBoost=true;
 }
 async function enemy1100SkillEffect(h,i,t) {
     const id=baseCardId(h),side=ownerOf(h),foes=field(1-side),allies=field(side);
