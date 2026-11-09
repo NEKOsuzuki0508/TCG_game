@@ -97,6 +97,7 @@ function challenge2StatBonus(h,s){
   if(!h||h.hp<=0)return 0;
   const side=ownerOf(h),foes=field(1-side),allies=field(side);
   let n=0;
+  if(h.id===1229&&foes.some(x=>x.combustion))n+=s==='attack'?15:s==='defense'?20:s==='speed'?10:0;
   if(s==='attack'){
     if(c2Has(side,1201))n+=20;
     if(c2Has(1-side,1205)&&h.marks>0)n-=10;
@@ -106,12 +107,10 @@ function challenge2StatBonus(h,s){
     if(c2Has(side,1225)&&foes.some(x=>x.combustion))n+=20;
     if(c2Has(1-side,1222)&&c2Debilitated(h))n-=10;
     if(h.id===1223)n+=foes.filter(c2Debilitated).length*15;
-    if(c2Has(side,1229)&&foes.some(x=>x.combustion))n+=10;
     if(c2Has(side,1231))n+=20;
   }
   if(s==='defense'){
     if(c2Has(1-side,1205)&&h.marks>0)n-=20;
-    if(h.id===1229&&foes.some(x=>x.combustion)){if(s==='attack')n+=15;if(s==='defense')n+=20;if(s==='speed')n+=10;}
   }
   return n;
 }
