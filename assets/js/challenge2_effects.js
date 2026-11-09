@@ -65,12 +65,14 @@ function challenge2Burst(target,initiator=null){
 function challenge2StartMatch(){
   for(let side=0;side<2;side++){
     const team=game.players[side].team;
-    if(team.some(h=>h.id===1200||h.id===1208)) {
+    const hpBoostSources=team.filter(h=>h.id===1200||h.id===1208);
+    for(const source of hpBoostSources){
       c2ShieldTeam(side);
       for(const h of team){h.maxHp=Math.round(h.maxHp*1.5);h.hp=Math.min(h.maxHp,Math.round(h.hp*1.5));}
-      log((team.some(h=>h.id===1200)?'ミヤ':'メル')+'：味方全員に開幕シールド・HP+50%');
+      log(source.name+'：味方全員に開幕シールド・HP+50%');
     }
-    if(team.some(h=>h.id===1214||h.id===1220||h.id===1226||h.id===1232))c2ShieldTeam(side);
+    const shieldSources=team.filter(h=>[1214,1220,1226,1232].includes(h.id));
+    for(const source of shieldSources){c2ShieldTeam(side);log(source.name+'：味方全員に開幕シールド');}
     if(team.some(h=>h.id===1202||h.id===1212||h.id===1218))for(const h of team)h.halfDamageUntil=game.turn+1;
     if(team.some(h=>h.id===1224))searchDeck(side,c=>/^[123]MP$/.test(c));
     for(const h of team)if(h.id>=1230&&h.id<=1235)h.combo35=true;
