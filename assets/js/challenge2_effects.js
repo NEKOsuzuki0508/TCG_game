@@ -151,7 +151,9 @@ function challenge2OnHit(actor,target,amount,options){
 }
 async function challenge2AfterNormal(actor,target){
   const side=ownerOf(actor),foes=field(1-side);
-  if(c2Alive(side,1200)&&foes.length){
+  const miyaFlag=actor.c2ExtraNormalActive?'c2MiyaExtraMarkTriggered':'c2MiyaMarkTriggered';
+  if(c2Alive(side,1200)&&foes.length&&!actor[miyaFlag]){
+    actor[miyaFlag]=true;
     const count=Math.min(foes.length,2+rand(2));
     const magneticDamage=Math.round(stat(actor,'attack')*.5);
     for(const x of shuffled(foes).slice(0,count))c2Mark(x,1,magneticDamage);
