@@ -6,13 +6,16 @@ function c2Debilitated(h){return !!(h&&(h.burn||h.poison||h.sleep||h.confusion||
 function c2Ailmented(h){return !!(h&&(h.burn||h.poison||h.sleep||h.confusion||h.charm||h.combustion))}
 function c2True(actor,target,n,label){
   if(!target||target.hp<=0)return 0;
-  let amount=n;
+  return directDamage(actor,target,n,label||'確定ダメージ',false);
+}
+function challenge2FixedDamageBonus(actor,target,amount,reason){
+  if(!target||amount<=0)return amount;
   const side=actor?ownerOf(actor):1-ownerOf(target);
   if(c2Alive(side,1210))amount+=10;
-  if(/磁気波動/.test(label||'')&&c2Has(side,1201))amount+=10;
+  if(/磁気波動/.test(reason||'')&&c2Has(side,1201))amount+=10;
   if(c2Alive(side,1219)&&c2Debilitated(target))amount+=15;
-  if(/拡散|隣接|連鎖電界|アクアスピア|インパクトスプレッド|レイジアンカー/.test(label||'')&&c2Has(side,1216))amount+=10;
-  return directDamage(actor,target,amount,label||'確定ダメージ',false);
+  if(/拡散|隣接|連鎖電界|アクアスピア|インパクトスプレッド|レイジアンカー/.test(reason||'')&&c2Has(side,1216))amount+=10;
+  return amount;
 }
 function c2HealTeam(side,n){for(const x of game.players[side].team)if(x.hp>0)heal(x,n)}
 function c2ShieldTeam(side){for(const x of game.players[side].team)if(x.hp>0)x.nextBarrier=(x.nextBarrier||0)+1}
