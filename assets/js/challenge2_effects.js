@@ -8,6 +8,7 @@ function c2True(actor,target,n,label){
   let amount=n;
   const side=actor?ownerOf(actor):1-ownerOf(target);
   if(c2Has(side,1210))amount+=10;
+  if(c2Has(side,1219)&&c2Debilitated(target))amount+=15;
   if(/拡散|隣接|アクアスピア|インパクトスプレッド|レイジアンカー/.test(label||'')&&c2Has(side,1216))amount+=10;
   return directDamage(actor,target,amount,label||'確定ダメージ',false);
 }
