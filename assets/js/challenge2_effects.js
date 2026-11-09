@@ -14,7 +14,7 @@ function challenge2FixedDamageBonus(actor,target,amount,reason){
   if(c2Alive(side,1210))amount+=10;
   if(/磁気波動/.test(reason||'')&&c2Has(side,1201))amount+=10;
   if(c2Alive(side,1219)&&c2Debilitated(target))amount+=15;
-  if(/拡散|隣接|連鎖電界|アクアスピア|インパクトスプレッド|レイジアンカー/.test(reason||'')&&c2Has(side,1216))amount+=10;
+  if(/拡散|隣接|連鎖電界|アクアスピア|インパクトスプレッド|ギガディフュージョン|レイジアンカー/.test(reason||'')&&c2Has(side,1216))amount+=10;
   return amount;
 }
 function c2HealTeam(side,n){for(const x of game.players[side].team)if(x.hp>0)heal(x,n)}
@@ -122,7 +122,7 @@ function challenge2StatBonus(h,s){
   }
   return n;
 }
-function challenge2DamageBonus(actor,target){return actor&&target&&c2Alive(ownerOf(actor),1219)&&c2Debilitated(target)?15:0;}
+function challenge2DamageBonus(actor,target,options={}){if(!actor||!target)return 0;const side=ownerOf(actor);let bonus=c2Alive(side,1219)&&c2Debilitated(target)?15:0;if(c2Has(side,1216)&&/ギガディフュージョン/.test(options.name||''))bonus+=10;return bonus;}
 function challenge2DamageReduce(actor,target,amount){
   if(!target||amount<=0)return amount;
   if((target.halfDamageUntil||0)>=game.turn)amount=Math.ceil(amount/2);
