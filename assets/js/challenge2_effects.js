@@ -13,10 +13,10 @@ function c2True(actor,target,n,label){
 }
 function c2HealTeam(side,n){for(const x of game.players[side].team)if(x.hp>0)heal(x,n)}
 function c2ShieldTeam(side){for(const x of game.players[side].team)if(x.hp>0)x.nextBarrier=(x.nextBarrier||0)+1}
-function c2GiveBurn(target){
+function c2GiveBurn(target,damage=15){
   if(!target||target.hp<=0||target.combustion)return false;
-  target.combustion=1;target.combustionDamage=15;
-  log(target.name+'に燃焼を付与（行動前に確定15ダメージ）');
+  target.combustion=1;target.combustionDamage=damage;
+  log(target.name+'に燃焼を付与（行動前に確定'+damage+'ダメージ）');
   if(typeof challenge2OnDebuff==='function')challenge2OnDebuff(target);
   return true;
 }
@@ -24,6 +24,7 @@ function c2MagneticPower(source){return source?Math.round(stat(source,'attack')*
 function c2Mark(target,count=1,power=20){
   if(!target||target.hp<=0)return;
   const side=1-ownerOf(target);
+  if(c2Has(side,1202)&&roll(.8))count+=2;
   for(let i=0;i<count;i++){
     if(target.marks<3){
       target.marks++;
@@ -55,8 +56,8 @@ function challenge2Burst(target,initiator=null){
   for(let i=0;i<count;i++){
     const bonus=c2Has(initiator?ownerOf(initiator):1-ownerOf(target),1201)?10:0;
     c2True(initiator,target,(powers[i]||20)+bonus,'磁気波動の炸裂');
+    if(c2Alive(1-ownerOf(target),1204))c2HealTeam(1-ownerOf(target),10);
   }
-  if(c2Alive(1-ownerOf(target),1204))c2HealTeam(1-ownerOf(target),10);
   challenge2MagnetChain(target);
   if(initiator&&initiator.id===1201&&target.hp>0&&Math.random()<.5)c2Mark(target,1+Math.floor(Math.random()*2),c2MagneticPower(initiator));
 }
@@ -87,7 +88,7 @@ function challenge2TurnStart(){
     const foes=field(1-side),allies=field(side);
     if(c2Has(side,1213))for(const x of allies)buff(x,'defense',10,0);
     if(c2Has(side,1219)&&foes.length)for(const x of shuffled(foes).slice(0,2)){buff(x,'attack',-10,0);buff(x,'defense',-10,0);}
-    if(c2Has(side,1225)){const pool=foes.filter(x=>!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}
+    if(c2Has(side,1225)){const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}
     if(c2Has(side,1230)&&roll(.5))searchDeck(side,c=>/^[123]MP$/.test(c));
     if(game.players[side].c2OlgaDiscount){game.players[side].c2OlgaDiscount=false;game.players[side].mpMod-=1;log('オルガ「重爆撃陣形」：このターンの技コスト−1MP');}
   }
@@ -98,18 +99,18 @@ function challenge2StatBonus(h,s){
   let n=0;
   if(s==='attack'){
     if(c2Has(side,1201))n+=20;
-    if(c2Has(side,1205)&&h.marks>0)n-=10;
-    if(c2Has(side,1207))n+=10;
+    if(c2Has(1-side,1205)&&h.marks>0)n-=10;
+    if(c2Has(side,1207))n+=20;
     if(h.id===1211)n+=allies.filter(x=>x.hp<x.maxHp).length*10+(game.players[side].team.some(x=>x.hp<=0)?20:0);
     if(h.id===1217&&allies.reduce((v,x)=>v+stat(x,'defense'),0)>=150)n+=20;
     if(c2Has(side,1225)&&foes.some(x=>x.combustion))n+=20;
     if(c2Has(1-side,1222)&&c2Debilitated(h))n-=10;
-    if(h.id===1223)n+=foes.filter(c2Debilitated).length*10;
+    if(h.id===1223)n+=foes.filter(c2Debilitated).length*15;
     if(c2Has(side,1229)&&foes.some(x=>x.combustion))n+=10;
-    if(c2Has(side,1231))n+=10;
+    if(c2Has(side,1231))n+=20;
   }
   if(s==='defense'){
-    if(c2Has(side,1205)&&h.marks>0)n-=20;
+    if(c2Has(1-side,1205)&&h.marks>0)n-=20;
     if(h.id===1229&&foes.some(x=>x.combustion))n+=10;
   }
   return n;
@@ -172,14 +173,14 @@ function challenge2OnDirectDamage(target,amount,reason){
   if(!target||amount<=0||/レイジアンカー/.test(reason||''))return;
   const side=1-ownerOf(target),source=field(side).find(x=>x.id===1215);
   if(!source)return;
-  for(const x of enemyAdjacent(target).slice())c2True(source,x,10,'リオ「レイジアンカー」');
+  for(const x of enemyAdjacent(target).slice())c2True(source,x,15,'リオ「レイジアンカー」');
 }
 function challenge2Combustion(target){
   const side=1-ownerOf(target);
   if(c2Alive(side,1226))c2True(null,target,10,'ルチル「開戦の紅蓮壁」');
   if(c2Alive(side,1228)){
     const allies=game.players[side].team.filter(x=>x.hp>0).sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp));
-    if(allies[0])heal(allies[0],10);
+    if(allies[0])heal(allies[0],15);
   }
 }
 function challenge2EndRound(){
@@ -214,15 +215,15 @@ async function challenge2SkillEffect(h,i,t){
     case 1221:await hit(t,stat(h,'attack'));if(t.hp>0)ailment(t,roll(.5)?'confusion':'poison');break;
     case 1222:ailment(t,roll(.5)?'sleep':'charm');buff(t,'defense',-10,1);break;
     case 1223:await hit(t,100,0,{trueOnly:c2Debilitated(t)});break;
-    case 1224:await hit(t,90);if(t.hp>0){if(!t.combustion)c2GiveBurn(t);else fixed(t,10,'バタフライエフェクト追加');}break;
+    case 1224:await hit(t,90);if(t.hp>0){if(!t.combustion)c2GiveBurn(t,25);else fixed(t,10,'バタフライエフェクト追加');}break;
     case 1225:{const was=!!t.combustion;await hit(t,80);if(was){t.combustion=0;if(t.hp>0)fixed(t,20,'フレイムスプレッド燃焼爆発');const pool=field(1-side).filter(x=>x.uid!==t.uid&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;}
     case 1226:for(const x of foes.slice()){await hit(x,40,0,{redirect:false});if(x.hp>0){if(x.combustion)buff(x,'defense',-20,1);else if(roll(.5))c2GiveBurn(x);}}break;
-    case 1227:{const was=!!t.combustion;await hit(t,80);if(was){t.combustion=0;for(const x of field(1-side).slice())fixed(x,25,'ブラストチェイサー連鎖爆炎');}break;}
+    case 1227:{const was=!!t.combustion;await hit(t,90);if(was){t.combustion=0;for(const x of field(1-side).slice())fixed(x,25,'ブラストチェイサー連鎖爆炎');}break;}
     case 1228:heal(t,20);{const pool=field(1-side).filter(x=>!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;
     case 1229:await hit(t,100,0,{trueOnly:!!t.combustion});break;
     case 1230:for(let k=0;k<3&&t&&t.hp>0;k++)await hit(t,30);break;
     case 1231:await hit(t,stat(h,'attack'));if(game.players[side].attacks>1&&t.hp>0)fixed(t,30,'ソニックストライク追加');break;
-    case 1232:for(let k=0;k<3&&t&&t.hp>0;k++)await hit(t,30+k*15);break;
+    case 1232:for(let k=0;k<3&&t&&t.hp>0;k++)await hit(t,40+k*15);break;
     case 1233:await hit(t,stat(h,'attack'));if(t.hp>0)fixed(t,game.players[side].attacks*10,'ソニックブレット追撃');break;
     case 1234:{const prior=game.players[side].attacks>0;for(const x of foes.slice()){await hit(x,40,0,{redirect:false});if(prior&&x.hp>0)fixed(x,20,'クラスターボム追加');}break;}
     case 1235:{const count=game.players[side].attacks>=3?3:2;for(let k=0;k<count&&t&&t.hp>0;k++)await hit(t,40);break;}
