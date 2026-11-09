@@ -297,7 +297,7 @@ async function damage(actor, target, power, bonusTrue = 0, options = {}) {
   let base = options.trueOnly ? 0 : (minimumHit ? 10 : attackPower - defensePower);
   if (minimumHit) log(`最低ダメージ保証：${actor.name}の攻撃威力${attackPower} ≦ ${target.name}のぼうぎょ${defensePower} → 確定10ダメージ（完全無効化以外は軽減後も保証）`);
   if (typeof sourceExtraTrue === 'function') bonusTrue += sourceExtraTrue(actor, target, side, bonusTrue) || 0;
-  let amount = base + bonusTrue; if (options.trueOnly) amount = bonusTrue; amount+=(actor.attackDamageBonus||0); if(typeof challenge2DamageBonus==='function')amount+=challenge2DamageBonus(actor,target,options)||0;
+  let amount = base + bonusTrue; if (options.trueOnly) amount = bonusTrue; if(options.fixedDamage&&typeof challenge2FixedDamageBonus==='function')amount=challenge2FixedDamageBonus(actor,target,amount,options.name,false); amount+=(actor.attackDamageBonus||0); if(typeof challenge2DamageBonus==='function')amount+=challenge2DamageBonus(actor,target,options)||0;
   game.players[side].attacks++;
   // 数値軽減を適用した後、攻撃を完全に防ぐ効果がなければ最低10ダメージを保証する。
   const completelyBlocked = target.immuneTurn === game.turn || target.shieldTurn === game.turn || (target.nextBarrier || 0) > 0 || (target.nextCommercialBarrier || 0) > 0;
