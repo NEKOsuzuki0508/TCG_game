@@ -161,7 +161,7 @@ async function challenge2AfterNormal(actor,target){
   if(actor.id===1232&&!actor.c2NormalTraitUsed&&!actor.c2ExtraNormalActive&&target&&target.hp>0){
     actor.c2NormalTraitUsed=true;
     if(roll(.5)){actor.c2ExtraNormalActive=true;log('ビスコット「ストリングエアショー」：追加通常攻撃');
-      for(let i=0;i<3&&target.hp>0;i++)await damage(actor,target,Math.round(stat(actor,'attack')*.35),0,{normal:true,name:'追加通常攻撃'});
+      for(let i=0;i<3&&target.hp>0;i++)await damage(actor,target,Math.round(stat(actor,'attack')*.35/10)*10,0,{normal:true,name:'追加通常攻撃'});
       actor.c2ExtraNormalActive=false;
     }
   }
