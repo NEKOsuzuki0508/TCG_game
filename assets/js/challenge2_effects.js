@@ -150,7 +150,7 @@ async function challenge2AfterNormal(actor,target){
   }
   if(actor.id===1232&&!actor.c2ExtraNormal&&target&&target.hp>0&&roll(.5)){
     actor.c2ExtraNormal=true;log('ビスコット「ストリングエアショー」：追加通常攻撃');
-    for(let i=0;i<3&&target.hp>0;i++)await damage(actor,target,Math.round(stat(actor,'attack')*.35/10)*10,0,{normal:true,name:'追加通常攻撃'});
+    for(let i=0;i<3&&target.hp>0;i++)await damage(actor,target,Math.round(stat(actor,'attack')*.35),0,{normal:true,name:'追加通常攻撃'});
     actor.c2ExtraNormal=false;
   }
   if(actor.id===1235&&roll(.5)){buff(actor,'speed',10,1);if(foes.length)c2True(actor,foes[rand(foes.length)],10,'エマ「オーバーブースト」');}
