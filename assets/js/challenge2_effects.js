@@ -230,7 +230,7 @@ async function challenge2SkillEffect(h,i,t){
     case 1225:{const was=!!t.combustion;await hit(t,80);if(was){t.combustion=0;if(t.hp>0)fixed(t,20,'フレイムスプレッド燃焼爆発');const pool=field(1-side).filter(x=>x.uid!==t.uid&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;}
     case 1226:for(const x of foes.slice()){await hit(x,40,0,{redirect:false});if(x.hp>0){if(x.combustion)buff(x,'defense',-20,1);else if(roll(.5))c2GiveBurn(x);}}break;
     case 1227:{const was=!!t.combustion;await hit(t,90);if(was){t.combustion=0;for(const x of field(1-side).slice())fixed(x,25,'ブラストチェイサー連鎖爆炎');}break;}
-    case 1228:heal(t,20);{const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;
+    case 1228:heal(t,20);{const pool=field(1-side).filter(x=>!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;
     case 1229:await hit(t,100,0,{trueOnly:!!t.combustion});break;
     case 1230:for(let k=0;k<3&&t&&t.hp>0;k++)await hit(t,30);break;
     case 1231:await hit(t,stat(h,'attack'));if(game.players[side].attacks>1&&t.hp>0)fixed(t,30,'ソニックストライク追加');break;
