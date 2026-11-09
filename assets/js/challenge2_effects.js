@@ -8,6 +8,7 @@ function c2True(actor,target,n,label){
   let amount=n;
   const side=actor?ownerOf(actor):1-ownerOf(target);
   if(c2Has(side,1210))amount+=10;
+  if(/磁気波動/.test(label||'')&&c2Has(side,1201))amount+=10;
   if(c2Has(side,1219)&&c2Debilitated(target))amount+=15;
   if(/拡散|隣接|アクアスピア|インパクトスプレッド|レイジアンカー/.test(label||'')&&c2Has(side,1216))amount+=10;
   return directDamage(actor,target,amount,label||'確定ダメージ',false);
@@ -55,8 +56,7 @@ function challenge2Burst(target,initiator=null){
   target.marks=0;target.c2Marks=[];
   log('⚡ '+target.name+'の磁気波動'+count+'枚が炸裂');
   for(let i=0;i<count;i++){
-    const bonus=c2Has(initiator?ownerOf(initiator):1-ownerOf(target),1201)?10:0;
-    c2True(initiator,target,(powers[i]||20)+bonus,'磁気波動の炸裂');
+    c2True(initiator,target,(powers[i]||20),'磁気波動の炸裂');
     if(c2Alive(1-ownerOf(target),1204))c2HealTeam(1-ownerOf(target),10);
   }
   challenge2MagnetChain(target);
