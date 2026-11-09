@@ -180,11 +180,11 @@ function challenge2OnDebuff(target){
   const side=1-ownerOf(target),source=field(side).find(x=>x.id===1221);
   if(source){const pool=field(ownerOf(target));if(pool.length)c2True(source,pool[rand(pool.length)],10,'ヴェイン「アビサルヴェノム」');}
 }
-function challenge2OnDirectDamage(target,amount,reason){
+function challenge2OnDirectDamage(target,amount,reason,adjacentSnapshot=[]){
   if(!target||amount<=0||/レイジアンカー/.test(reason||''))return;
   const side=1-ownerOf(target),source=field(side).find(x=>x.id===1215);
   if(!source)return;
-  for(const x of enemyAdjacent(target).slice())c2True(source,x,15,'リオ「レイジアンカー」');
+  for(const x of (adjacentSnapshot||[]).slice())if(x&&x.hp>0)c2True(source,x,15,'リオ「レイジアンカー」');
 }
 function challenge2Combustion(target){
   const side=1-ownerOf(target);
