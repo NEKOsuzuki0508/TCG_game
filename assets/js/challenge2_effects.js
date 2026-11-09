@@ -90,7 +90,7 @@ function challenge2OnEnter(h,firstEntry){
 function challenge2TurnStart(){
   for(let side=0;side<2;side++){
     const foes=field(1-side),allies=field(side);
-    if(c2Has(side,1213))for(const x of allies)buff(x,'defense',10,0);
+    if(c2Alive(side,1213))for(const x of allies)buff(x,'defense',10,0);
     if(c2Alive(side,1219)&&foes.length)for(const x of shuffled(foes).slice(0,2)){buff(x,'attack',-10,0);buff(x,'defense',-10,0);}
     if(c2Alive(side,1225)){const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)],25);}
     if(c2Has(side,1230)&&roll(.5))searchDeck(side,c=>/^[123]MP$/.test(c));
