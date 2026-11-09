@@ -192,7 +192,7 @@ function challenge2EndRound(){
 }
 async function challenge2SkillEffect(h,i,t){
   const id=h.id,side=ownerOf(h),foes=field(1-side),allies=field(side),sk=HERO_MAP[id].skills[i];
-  const hit=async(target,power,bonus=0,opts={})=>{if(target&&target.hp>0)await damage(h,target,power,bonus,{name:sk.name,...opts});};
+  const hit=async(target,power,bonus=0,opts={})=>{if(target&&target.hp>0)await damage(h,target,power,opts.trueOnly?power+bonus:bonus,{name:sk.name,...opts});};
   const fixed=(target,n,label=sk.name)=>c2True(h,target,n,label);
   switch(id){
     case 1200:{await hit(t,80);const pool=field(1-side);for(let k=0;k<3&&pool.length;k++)c2Mark(pool[rand(pool.length)],1,c2MagneticPower(h));break;}
