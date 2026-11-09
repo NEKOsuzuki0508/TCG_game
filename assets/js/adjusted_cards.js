@@ -350,7 +350,7 @@ async function enemy1100AfterNormal(actor,target) {
     const side=ownerOf(actor),id=baseCardId(actor),foes=field(1-side);
     if(enemy1100Alive(side,1100)&&foes.length){
         const count=Math.min(foes.length,2+rand(2));
-        for(const x of shuffled(foes).slice(0,count))magnet(x,1,false);
+        for(const x of shuffled(foes).slice(0,count))magnet(x,1,true);
     }
     if(id===1135&&roll(.5)){
         buff(actor,'speed',10,999);
@@ -404,9 +404,9 @@ function enemy1100MagnetBurst(target,amount,initiator,neighbors) {
     }
     if(baseCardId(initiator)===1101&&roll(.5)&&target.hp>0)magnet(target,1+rand(2),false);
 }
-function enemy1100MagnetCount(target,count) {
+function enemy1100MagnetCount(target,count,skillOrigin=true) {
     const side=1-ownerOf(target);
-    if(enemy1100Alive(side,1102)){log('ルネ「蒼雷華」：磁気波動を2枚追加');return count+2;}
+    if(skillOrigin&&enemy1100Alive(side,1102)){log('ルネ「蒼雷華」：磁気波動を2枚追加');return count+2;}
     return count;
 }
 function enemy1100OnDirectDamage(target,amount,reason,adjacentSnapshot=[]) {
