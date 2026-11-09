@@ -3,6 +3,7 @@
 function c2Has(side,id){return field(side).some(h=>h.id===id&&h.hp>0)}
 function c2Alive(side,id){return game.players[side].team.some(h=>h.id===id&&h.hp>0)}
 function c2Debilitated(h){return !!(h&&(h.burn||h.poison||h.sleep||h.confusion||h.charm||h.combustion||statDebuff(h)))}
+function c2Ailmented(h){return !!(h&&(h.burn||h.poison||h.sleep||h.confusion||h.charm||h.combustion))}
 function c2True(actor,target,n,label){
   if(!target||target.hp<=0)return 0;
   let amount=n;
@@ -10,7 +11,7 @@ function c2True(actor,target,n,label){
   if(c2Has(side,1210))amount+=10;
   if(/磁気波動/.test(label||'')&&c2Has(side,1201))amount+=10;
   if(c2Has(side,1219)&&c2Debilitated(target))amount+=15;
-  if(/拡散|隣接|アクアスピア|インパクトスプレッド|レイジアンカー/.test(label||'')&&c2Has(side,1216))amount+=10;
+  if(/拡散|隣接|連鎖電界|アクアスピア|インパクトスプレッド|レイジアンカー/.test(label||'')&&c2Has(side,1216))amount+=10;
   return directDamage(actor,target,amount,label||'確定ダメージ',false);
 }
 function c2HealTeam(side,n){for(const x of game.players[side].team)if(x.hp>0)heal(x,n)}
@@ -109,7 +110,7 @@ function challenge2StatBonus(h,s){
     if(h.id===1211)n+=allies.filter(x=>x.hp<x.maxHp).length*10+(game.players[side].team.some(x=>x.hp<=0)?20:0);
     if(h.id===1217&&allies.reduce((v,x)=>v+stat(x,'defense'),0)>=150)n+=20;
     if(c2Has(side,1225)&&foes.some(x=>x.combustion))n+=20;
-    if(c2Has(1-side,1222)&&c2Debilitated(h))n-=10;
+    if(c2Has(1-side,1222)&&c2Ailmented(h))n-=10;
     if(h.id===1223)n+=foes.filter(c2Debilitated).length*15;
     if(c2Has(side,1231))n+=20;
   }
