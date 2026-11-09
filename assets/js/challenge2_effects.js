@@ -93,7 +93,7 @@ function challenge2OnEnter(h,firstEntry){
 function challenge2TurnStart(){
   for(let side=0;side<2;side++){
     const foes=field(1-side),allies=field(side);
-    if(c2Alive(side,1213))for(const x of allies)buff(x,'defense',10,0);
+    if(c2Alive(side,1213))for(const x of teamAlive(side))buff(x,'defense',10,0);
     if(c2Alive(side,1219)&&foes.length)for(const x of shuffled(foes).slice(0,2)){buff(x,'attack',-10,0);buff(x,'defense',-10,0);}
     if(c2Alive(side,1225)){const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)],25);}
     if(c2Alive(side,1230)&&roll(.5))searchDeck(side,c=>/^[123]MP$/.test(c));
@@ -133,7 +133,7 @@ function challenge2OnSkillCast(actor,target){
   const side=ownerOf(actor);
   if(c2Has(side,1206))for(const x of teamAlive(side))x.skillDamageReduceUntil=game.turn;
   if(c2Has(side,1212)){
-    for(const x of field(side))buff(x,'defense',10,0);
+    for(const x of teamAlive(side))buff(x,'defense',10,0);
     if(target&&target.hp>0)buff(target,'attack',-10,0);
   }
   if(c2Alive(side,1213))for(const x of teamAlive(side))x.attackDamageBonus=(x.attackDamageBonus||0)+10;
