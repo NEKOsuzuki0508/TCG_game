@@ -99,6 +99,7 @@ function challenge2StatBonus(h,s){
   const side=ownerOf(h),foes=field(1-side),allies=field(side);
   let n=0;
   if(h.id===1229&&foes.some(x=>x.combustion))n+=s==='attack'?15:s==='defense'?20:s==='speed'?10:0;
+  if(h.id===1235&&s==='speed')n+=h.c2EmmaSpeedBonus||0;
   if(s==='attack'){
     if(c2Has(side,1201))n+=20;
     if(c2Has(1-side,1205)&&h.marks>0)n-=10;
@@ -137,11 +138,10 @@ function challenge2DefenseTrigger(side){
 }
 function challenge2OnHit(actor,target,amount,options){
   if(!actor||!target||amount<=0||ownerOf(actor)===ownerOf(target))return;
-  if(c2Has(ownerOf(actor),1215)&&/拡散|スプレッド|アクアスピア|インパクトスプレッド|ギガディフュージョン/.test(options?.name||''))for(const x of enemyAdjacent(target).slice())c2True(actor,x,15,'リオ「レイジアンカー」');
   const side=ownerOf(target);
   if(c2Has(side,1207))c2True(null,actor,20,'立華つむぎ「金遁の術」');
   if(target.id===1209)c2True(null,actor,10,'ヴァネッサ「挑発の重盾」');
-  if(c2Has(side,1218)){buff(target,'attack',-10,0);buff(target,'defense',-10,0);}
+  if(c2Has(1-side,1218)){buff(target,'attack',-10,0);buff(target,'defense',-10,0);}
   if(actor.id===1227&&target.combustion)c2True(actor,target,15,'イグナ「連鎖爆炎」');
 }
 async function challenge2AfterNormal(actor,target){
@@ -158,7 +158,7 @@ async function challenge2AfterNormal(actor,target){
       actor.c2ExtraNormalActive=false;
     }
   }
-  if(actor.id===1235&&!actor.c2EmmaTraitUsed){actor.c2EmmaTraitUsed=true;if(roll(.5)){buff(actor,'speed',10,1);if(foes.length)c2True(actor,foes[rand(foes.length)],10,'エマ「オーバーブースト」');}}
+  if(actor.id===1235&&!actor.c2EmmaTraitUsed){actor.c2EmmaTraitUsed=true;if(roll(.5)){actor.c2EmmaSpeedBonus=(actor.c2EmmaSpeedBonus||0)+10;if(foes.length)c2True(actor,foes[rand(foes.length)],10,'エマ「オーバーブースト」');}}
 }
 function challenge2AfterAttack(actor,target,amount,options){
   const side=ownerOf(actor);
