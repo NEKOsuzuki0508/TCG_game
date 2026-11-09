@@ -8,9 +8,9 @@ function c2True(actor,target,n,label){
   if(!target||target.hp<=0)return 0;
   let amount=n;
   const side=actor?ownerOf(actor):1-ownerOf(target);
-  if(c2Has(side,1210))amount+=10;
+  if(c2Alive(side,1210))amount+=10;
   if(/磁気波動/.test(label||'')&&c2Has(side,1201))amount+=10;
-  if(c2Has(side,1219)&&c2Debilitated(target))amount+=15;
+  if(c2Alive(side,1219)&&c2Debilitated(target))amount+=15;
   if(/拡散|隣接|連鎖電界|アクアスピア|インパクトスプレッド|レイジアンカー/.test(label||'')&&c2Has(side,1216))amount+=10;
   return directDamage(actor,target,amount,label||'確定ダメージ',false);
 }
@@ -27,7 +27,7 @@ function c2MagneticPower(source){return source?Math.round(stat(source,'attack')*
 function c2Mark(target,count=1,power=20){
   if(!target||target.hp<=0)return;
   const side=1-ownerOf(target);
-  if(c2Has(side,1202)&&roll(.8))count+=2;
+  if(c2Alive(side,1202)&&roll(.8))count+=2;
   for(let i=0;i<count;i++){
     if(target.marks<3){
       target.marks++;
@@ -44,11 +44,11 @@ function c2Mark(target,count=1,power=20){
 }
 function challenge2MagnetChain(target){
   const side=1-ownerOf(target);
-  if(!c2Has(side,1203)||game.c2MagnetChainActive)return;
+  if(!c2Alive(side,1203)||game.c2MagnetChainActive)return;
   game.c2MagnetChainActive=true;
   try{
     const near=enemyAdjacent(target).slice();
-    for(const x of near){c2Mark(x,1,c2MagneticPower(field(side).find(h=>h.id===1203)));c2True(null,x,10,'エレナ「連鎖電界」');}
+    for(const x of near){c2Mark(x,1,c2MagneticPower(game.players[side].team.find(h=>h.id===1203&&h.hp>0)));c2True(null,x,10,'エレナ「連鎖電界」');}
   }finally{game.c2MagnetChainActive=false}
 }
 function challenge2Burst(target,initiator=null){
@@ -91,8 +91,8 @@ function challenge2TurnStart(){
   for(let side=0;side<2;side++){
     const foes=field(1-side),allies=field(side);
     if(c2Has(side,1213))for(const x of allies)buff(x,'defense',10,0);
-    if(c2Has(side,1219)&&foes.length)for(const x of shuffled(foes).slice(0,2)){buff(x,'attack',-10,0);buff(x,'defense',-10,0);}
-    if(c2Has(side,1225)){const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)],25);}
+    if(c2Alive(side,1219)&&foes.length)for(const x of shuffled(foes).slice(0,2)){buff(x,'attack',-10,0);buff(x,'defense',-10,0);}
+    if(c2Alive(side,1225)){const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)],25);}
     if(c2Has(side,1230)&&roll(.5))searchDeck(side,c=>/^[123]MP$/.test(c));
     if(game.players[side].c2OlgaDiscount){game.players[side].c2OlgaDiscount=false;game.players[side].mpMod-=1;log('オルガ「重爆撃陣形」：このターンの技コスト−1MP');}
   }
@@ -105,21 +105,21 @@ function challenge2StatBonus(h,s){
   if(h.id===1235&&s==='speed')n+=h.c2EmmaSpeedBonus||0;
   if(s==='attack'){
     if(c2Has(side,1201))n+=20;
-    if(c2Has(1-side,1205)&&h.marks>0)n-=10;
+    if(c2Alive(1-side,1205)&&h.marks>0)n-=10;
     if(c2Has(side,1207))n+=20;
     if(h.id===1211)n+=allies.filter(x=>x.hp<x.maxHp).length*10+(game.players[side].team.some(x=>x.hp<=0)?20:0);
     if(h.id===1217&&allies.reduce((v,x)=>v+stat(x,'defense'),0)>=150)n+=20;
-    if(c2Has(side,1225)&&foes.some(x=>x.combustion))n+=20;
+    if(c2Alive(side,1225)&&foes.some(x=>x.combustion))n+=20;
     if(c2Has(1-side,1222)&&c2Ailmented(h))n-=10;
     if(h.id===1223)n+=foes.filter(c2Debilitated).length*15;
     if(c2Has(side,1231))n+=20;
   }
   if(s==='defense'){
-    if(c2Has(1-side,1205)&&h.marks>0)n-=20;
+    if(c2Alive(1-side,1205)&&h.marks>0)n-=20;
   }
   return n;
 }
-function challenge2DamageBonus(actor,target){return actor&&target&&c2Has(ownerOf(actor),1219)&&c2Debilitated(target)?15:0;}
+function challenge2DamageBonus(actor,target){return actor&&target&&c2Alive(ownerOf(actor),1219)&&c2Debilitated(target)?15:0;}
 function challenge2DamageReduce(actor,target,amount){
   if(!target||amount<=0)return amount;
   let reduced=false;
@@ -137,7 +137,7 @@ function challenge2OnSkillCast(actor,target){
   }
 }
 function challenge2DefenseTrigger(side){
-  if(c2Has(side,1213))for(const x of teamAlive(side))x.attackDamageBonus=(x.attackDamageBonus||0)+10;
+  if(c2Alive(side,1213))for(const x of teamAlive(side))x.attackDamageBonus=(x.attackDamageBonus||0)+10;
 }
 function challenge2OnHit(actor,target,amount,options){
   if(!actor||!target||amount<=0||ownerOf(actor)===ownerOf(target))return;
@@ -149,7 +149,7 @@ function challenge2OnHit(actor,target,amount,options){
 }
 async function challenge2AfterNormal(actor,target){
   const side=ownerOf(actor),foes=field(1-side);
-  if(c2Has(side,1200)&&foes.length){
+  if(c2Alive(side,1200)&&foes.length){
     const count=Math.min(foes.length,2+rand(2));
     const magneticDamage=Math.round(stat(actor,'attack')*.5);
     for(const x of shuffled(foes).slice(0,count))c2Mark(x,1,magneticDamage);
