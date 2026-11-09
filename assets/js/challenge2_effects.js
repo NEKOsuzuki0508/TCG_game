@@ -8,12 +8,12 @@ function c2True(actor,target,n,label){
   if(!target||target.hp<=0)return 0;
   return directDamage(actor,target,n,label||'確定ダメージ',false);
 }
-function challenge2FixedDamageBonus(actor,target,amount,reason){
+function challenge2FixedDamageBonus(actor,target,amount,reason,includeAdel=true){
   if(!target||amount<=0)return amount;
   const side=actor?ownerOf(actor):1-ownerOf(target);
   if(c2Alive(side,1210))amount+=10;
   if(/磁気波動/.test(reason||'')&&c2Has(side,1201))amount+=10;
-  if(c2Alive(side,1219)&&c2Debilitated(target))amount+=15;
+  if(includeAdel&&c2Alive(side,1219)&&c2Debilitated(target))amount+=15;
   if(/拡散|隣接|連鎖電界|アクアスピア|インパクトスプレッド|ギガディフュージョン|レイジアンカー/.test(reason||'')&&c2Has(side,1216))amount+=10;
   return amount;
 }
@@ -207,7 +207,7 @@ async function challenge2SkillEffect(h,i,t){
     case 1202:await hit(t,90);if(t.hp>0)c2Mark(t,1,c2MagneticPower(h));break;
     case 1203:await hit(t,60);for(const x of foes.slice())if(x.marks)challenge2Burst(x,h);break;
     case 1204:{for(const x of allies)heal(x,30);const cureTarget=allies.find(x=>x.sleep||x.burn||x.poison||x.confusion||x.charm)||allies[0];if(cureTarget)cure(cureTarget);if(t&&t.hp>0)c2Mark(t,1,c2MagneticPower(h));break;}
-    case 1205:await hit(t,100,0,{trueOnly:!!t.marks});break;
+    case 1205:await hit(t,100,0,{trueOnly:!!t.marks,fixedDamage:!!t.marks});break;
     case 1206:await hit(t,90);break;
     case 1207:{const below=t.hp<t.maxHp*.5;await hit(t,stat(h,'attack'));if(below&&t.hp>0)fixed(t,30,'リベンジスラッシュ追加');break;}
     case 1208:{const x=foes.slice().sort((a,b)=>a.hp-b.hp)[0];if(x){await hit(x,80);if(x.hp>0)fixed(x,20,'スナイプリベンジ追加');}break;}
@@ -225,7 +225,7 @@ async function challenge2SkillEffect(h,i,t){
     case 1220:await hit(t,80);if(t.hp>0&&c2Debilitated(t))fixed(t,40,'チェインキャノン追加');break;
     case 1221:await hit(t,stat(h,'attack'));if(t.hp>0){if(roll(.5))ailment(t,'confusion');if(roll(.5))ailment(t,'poison');}break;
     case 1222:ailment(t,roll(.5)?'sleep':'charm');buff(t,'defense',-15,1);break;
-    case 1223:await hit(t,100,0,{trueOnly:c2Debilitated(t)});break;
+    case 1223:await hit(t,100,0,{trueOnly:c2Debilitated(t),fixedDamage:c2Debilitated(t)});break;
     case 1224:await hit(t,90);if(t.hp>0){if(!t.combustion)c2GiveBurn(t,25);else fixed(t,10,'バタフライエフェクト追加');}break;
     case 1225:{const was=!!t.combustion;await hit(t,80);if(was){t.combustion=0;if(t.hp>0)fixed(t,20,'フレイムスプレッド燃焼爆発');const pool=field(1-side).filter(x=>x.uid!==t.uid&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;}
     case 1226:for(const x of foes.slice()){await hit(x,40,0,{redirect:false});if(x.hp>0){if(x.combustion)buff(x,'defense',-20,1);else if(roll(.5))c2GiveBurn(x);}}break;
