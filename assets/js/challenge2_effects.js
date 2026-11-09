@@ -32,6 +32,7 @@ function c2Mark(target,count=1,power=20){
   const side=1-ownerOf(target);
   if(c2Alive(side,1202)&&roll(.8))count+=2;
   for(let i=0;i<count;i++){
+    if(target.hp<=0)break;
     if(target.marks<3){
       target.marks++;
       target.c2Marks=target.c2Marks||[];
@@ -39,23 +40,25 @@ function c2Mark(target,count=1,power=20){
       log('⚡ '+target.name+'に磁気波動（'+target.marks+'/3）');
       if(c2Alive(side,1204))c2HealTeam(side,10);
     }else{
+      const adjacentSnapshot=enemyAdjacent(target).slice();
       c2True(null,target,15,'磁気波動の超過');
       if(c2Alive(side,1204))c2HealTeam(side,10);
-      challenge2MagnetChain(target);
+      challenge2MagnetChain(target,adjacentSnapshot);
     }
   }
 }
-function challenge2MagnetChain(target){
+function challenge2MagnetChain(target,adjacentSnapshot=null){
   const side=1-ownerOf(target);
   if(!c2Alive(side,1203)||game.c2MagnetChainActive)return;
   game.c2MagnetChainActive=true;
   try{
-    const near=enemyAdjacent(target).slice();
+    const near=(adjacentSnapshot||enemyAdjacent(target)).slice();
     for(const x of near){c2Mark(x,1,c2MagneticPower(game.players[side].team.find(h=>h.id===1203&&h.hp>0)));c2True(null,x,10,'エレナ「連鎖電界」');}
   }finally{game.c2MagnetChainActive=false}
 }
 function challenge2Burst(target,initiator=null){
   if(!target||target.hp<=0||!target.marks)return;
+  const adjacentSnapshot=enemyAdjacent(target).slice();
   const count=target.marks,powers=Array.isArray(target.c2Marks)?target.c2Marks.slice(0,count):[];
   target.marks=0;target.c2Marks=[];
   log('⚡ '+target.name+'の磁気波動'+count+'枚が炸裂');
@@ -63,7 +66,7 @@ function challenge2Burst(target,initiator=null){
     c2True(initiator,target,(powers[i]||20),'磁気波動の炸裂');
     if(c2Alive(1-ownerOf(target),1204))c2HealTeam(1-ownerOf(target),10);
   }
-  challenge2MagnetChain(target);
+  challenge2MagnetChain(target,adjacentSnapshot);
   if(initiator&&initiator.id===1201&&target.hp>0&&Math.random()<.5)c2Mark(target,1+Math.floor(Math.random()*2),c2MagneticPower(initiator));
 }
 function challenge2StartMatch(){
