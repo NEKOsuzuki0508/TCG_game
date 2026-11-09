@@ -142,9 +142,10 @@ function challenge2OnHit(actor,target,amount,options){
 }
 async function challenge2AfterNormal(actor,target){
   const side=ownerOf(actor),foes=field(1-side);
-  if(actor.id===1200&&foes.length){
+  if(c2Has(side,1200)&&foes.length){
     const count=Math.min(foes.length,2+rand(2));
-    for(const x of shuffled(foes).slice(0,count))c2Mark(x,1,Math.round(stat(actor,'attack')*.5));
+    const magneticDamage=Math.round(stat(actor,'attack')*.5);
+    for(const x of shuffled(foes).slice(0,count))c2Mark(x,1,magneticDamage);
   }
   if(actor.id===1232&&!actor.c2ExtraNormal&&target&&target.hp>0&&roll(.5)){
     actor.c2ExtraNormal=true;log('ビスコット「ストリングエアショー」：追加通常攻撃');
