@@ -243,6 +243,7 @@ function enemy1100GiveBurn(target) {
     target.combustion=1; target.combustionDamage=15;
     log(target.name+'に燃焼を付与（行動直前に確定15ダメージ）');
     if(typeof sourceOnDebuff==='function')sourceOnDebuff(target);
+    if(typeof enemy1100OnDebuff==='function')enemy1100OnDebuff(target);
     return true;
 }
 function enemy1100StartMatch() {
@@ -318,7 +319,6 @@ function enemy1100AttackBonus(actor,target) {
     const side=ownerOf(actor);
     let n=0;
     if(enemy1100Alive(side,1119)&&enemy1100Debilitated(target))n+=10;
-    if(enemy1100Alive(side,1120)&&enemy1100Debilitated(target))n+=10;
     return n;
 }
 function enemy1100DefenseTrigger(side) {
