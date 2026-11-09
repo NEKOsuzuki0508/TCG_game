@@ -122,10 +122,8 @@ function challenge2StatBonus(h,s){
 function challenge2DamageBonus(actor,target){return actor&&target&&c2Alive(ownerOf(actor),1219)&&c2Debilitated(target)?15:0;}
 function challenge2DamageReduce(actor,target,amount){
   if(!target||amount<=0)return amount;
-  let reduced=false;
-  if((target.halfDamageUntil||0)>=game.turn){amount=Math.ceil(amount/2);reduced=true;}
-  if((target.skillDamageReduceUntil||-1)>=game.turn){amount=Math.max(0,amount-10);reduced=true;}
-  if(reduced)challenge2DefenseTrigger(ownerOf(target));
+  if((target.halfDamageUntil||0)>=game.turn)amount=Math.ceil(amount/2);
+  if((target.skillDamageReduceUntil||-1)>=game.turn)amount=Math.max(0,amount-10);
   return amount;
 }
 function challenge2OnSkillCast(actor,target){
@@ -135,6 +133,7 @@ function challenge2OnSkillCast(actor,target){
     for(const x of field(side))buff(x,'defense',10,0);
     if(target&&target.hp>0)buff(target,'attack',-10,0);
   }
+  if(c2Alive(side,1213))for(const x of teamAlive(side))x.attackDamageBonus=(x.attackDamageBonus||0)+10;
 }
 function challenge2DefenseTrigger(side){
   if(c2Alive(side,1213))for(const x of teamAlive(side))x.attackDamageBonus=(x.attackDamageBonus||0)+10;
