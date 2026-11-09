@@ -111,7 +111,7 @@ function challenge2StatBonus(h,s){
   }
   if(s==='defense'){
     if(c2Has(1-side,1205)&&h.marks>0)n-=20;
-    if(h.id===1229&&foes.some(x=>x.combustion))n+=10;
+    if(h.id===1229&&foes.some(x=>x.combustion)){if(s==='attack')n+=15;if(s==='defense')n+=20;if(s==='speed')n+=10;}
   }
   return n;
 }
@@ -177,7 +177,7 @@ function challenge2OnDirectDamage(target,amount,reason){
 }
 function challenge2Combustion(target){
   const side=1-ownerOf(target);
-  if(c2Alive(side,1226))c2True(null,target,10,'ルチル「開戦の紅蓮壁」');
+  if(c2Alive(side,1226))c2True(null,target,10,'ルチル「ドロップオブスターズ」');
   if(c2Alive(side,1228)){
     const allies=game.players[side].team.filter(x=>x.hp>0).sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp));
     if(allies[0])heal(allies[0],15);
@@ -213,13 +213,13 @@ async function challenge2SkillEffect(h,i,t){
     case 1219:await hit(t,stat(h,'attack'));if(t.hp>0)t.banSkills=1;break;
     case 1220:await hit(t,80);if(t.hp>0&&c2Debilitated(t))fixed(t,40,'チェインキャノン追加');break;
     case 1221:await hit(t,stat(h,'attack'));if(t.hp>0)ailment(t,roll(.5)?'confusion':'poison');break;
-    case 1222:ailment(t,roll(.5)?'sleep':'charm');buff(t,'defense',-10,1);break;
+    case 1222:ailment(t,roll(.5)?'sleep':'charm');buff(t,'defense',-15,1);break;
     case 1223:await hit(t,100,0,{trueOnly:c2Debilitated(t)});break;
     case 1224:await hit(t,90);if(t.hp>0){if(!t.combustion)c2GiveBurn(t,25);else fixed(t,10,'バタフライエフェクト追加');}break;
     case 1225:{const was=!!t.combustion;await hit(t,80);if(was){t.combustion=0;if(t.hp>0)fixed(t,20,'フレイムスプレッド燃焼爆発');const pool=field(1-side).filter(x=>x.uid!==t.uid&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;}
     case 1226:for(const x of foes.slice()){await hit(x,40,0,{redirect:false});if(x.hp>0){if(x.combustion)buff(x,'defense',-20,1);else if(roll(.5))c2GiveBurn(x);}}break;
     case 1227:{const was=!!t.combustion;await hit(t,90);if(was){t.combustion=0;for(const x of field(1-side).slice())fixed(x,25,'ブラストチェイサー連鎖爆炎');}break;}
-    case 1228:heal(t,20);{const pool=field(1-side).filter(x=>!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;
+    case 1228:heal(t,20);{const pool=game.players[1-side].team.filter(x=>x.hp>0&&!x.combustion);if(pool.length)c2GiveBurn(pool[rand(pool.length)]);}break;
     case 1229:await hit(t,100,0,{trueOnly:!!t.combustion});break;
     case 1230:for(let k=0;k<3&&t&&t.hp>0;k++)await hit(t,30);break;
     case 1231:await hit(t,stat(h,'attack'));if(game.players[side].attacks>1&&t.hp>0)fixed(t,30,'ソニックストライク追加');break;
