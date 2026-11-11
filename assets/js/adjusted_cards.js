@@ -326,6 +326,7 @@ function enemy1100AttackBonus(actor,target) {
 function enemy1100DefenseTrigger(side) {
     if(enemy1100Alive(side,1113))for(const ally of teamAlive(side))ally.attackDamageBonus=(ally.attackDamageBonus||0)+10;
 }
+function enemy1100HalfDamage(amount) { return Math.max(0, Math.ceil(Math.max(0, Number(amount) || 0) / 10) * 5); }
 function enemy1100DamageReduce(actor,target,amount) {
     if(!target)return amount;
     const side=ownerOf(target);
