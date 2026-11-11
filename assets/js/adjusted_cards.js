@@ -330,7 +330,7 @@ function enemy1100HalfDamage(amount) { return Math.max(0, Math.ceil(Math.max(0, 
 function enemy1100DamageReduce(actor,target,amount) {
     if(!target)return amount;
     const side=ownerOf(target);
-    if(amount>0&&(target.halfDamageUntil||0)>=game.turn){amount=halfDamageRoundedToFive(amount);enemy1100DefenseTrigger(side);}
+    if(amount>0&&(target.halfDamageUntil||0)>=game.turn){amount=enemy1100HalfDamage(amount);enemy1100DefenseTrigger(side);}
     if(amount>0&&(target.skillDamageReduceUntil||-1)>=game.turn){amount=Math.max(0,amount-10);enemy1100DefenseTrigger(side);}
     return amount;
 }
