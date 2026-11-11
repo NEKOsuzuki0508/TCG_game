@@ -126,9 +126,10 @@ function challenge2StatBonus(h,s){
   return n;
 }
 function challenge2DamageBonus(actor,target,options={}){if(!actor||!target)return 0;const side=ownerOf(actor);let bonus=c2Alive(side,1219)&&c2Debilitated(target)?15:0;if(c2Has(side,1216)&&/ギガディフュージョン/.test(options.name||''))bonus+=10;return bonus;}
+function challenge2HalfDamage(amount){return Math.max(0,Math.ceil(Math.max(0,Number(amount)||0)/10)*5);}
 function challenge2DamageReduce(actor,target,amount){
   if(!target||amount<=0)return amount;
-  if((target.halfDamageUntil||0)>=game.turn)amount=Math.ceil(amount/2);
+  if((target.halfDamageUntil||0)>=game.turn)amount=challenge2HalfDamage(amount);
   if((target.skillDamageReduceUntil||-1)>=game.turn)amount=Math.max(0,amount-10);
   return amount;
 }
