@@ -16,12 +16,13 @@ const CHALLENGE2_FORMATIONS = [
   { key:'mag', name:'陸軍｜磁気波動', ids:[1200,1201,1202,1203,1204,1205] },
   { key:'combo', name:'空軍｜通常攻撃・連撃', ids:[1230,1231,1232,1233,1234,1235] }
 ];
-const SUPPORTS = ['いずみのみず', 'にがいお茶', 'つちのかたまり', 'かみなりのたね', 'かんぽうゼリー', '流れる魔力', '止められた魔力', 'まほうの甲冑', 'ひらめきの一手', 'ヒメアオホノカ', '市販結界装置'];
+const EXCEED_CARD = '超過機構（イクシードチャージ）';
+const SUPPORTS = ['いずみのみず', 'にがいお茶', 'つちのかたまり', 'かみなりのたね', 'かんぽうゼリー', '流れる魔力', '止められた魔力', 'まほうの甲冑', 'ひらめきの一手', 'ヒメアオホノカ', '市販結界装置', EXCEED_CARD];
 const HERO_MAP = Object.fromEntries(CARD_DATA.map(c => [c.id, c]));
 const TARG = { 1100:['enemy'],1101:['enemy'],1102:['enemy'],1103:['enemy'],1104:['ally'],1105:['enemy'],1106:['enemy'],1107:['enemy'],1108:['enemy'],1109:['enemy'],1110:['ally'],1111:['enemy'],1112:['enemy'],1113:['enemy'],1114:['enemy'],1115:['enemy'],1116:['enemy'],1117:['none'],1118:['enemy'],1119:['enemy'],1120:['enemy'],1121:['enemy'],1122:['enemy'],1123:['enemy'],1124:['enemy'],1125:['enemy'],1126:['none'],1127:['enemy'],1128:['ally'],1129:['enemy'],1130:['enemy'],1131:['enemy'],1132:['enemy'],1133:['enemy'],1134:['none'],1135:['enemy'], 1000: ['enemy'], 1001: ['enemy'], 1002: ['enemy'], 1003: ['enemy'], 1004: ['ally'], 1005: ['enemy'], 1006: ['enemy'], 1007: ['enemy'], 1008: ['enemy'], 1009: ['enemy'], 1010: ['ally'], 1011: ['enemy'], 1012: ['enemy'], 1013: ['enemy'], 1014: ['enemy'], 1015: ['enemy'], 1016: ['enemy'], 1017: ['none'], 1018: ['enemy'], 1019: ['enemy'], 1020: ['enemy'], 1021: ['enemy'], 1022: ['enemy'], 1023: ['enemy'], 1024: ['enemy'], 1025: ['enemy'], 1026: ['none'], 1027: ['enemy'], 1028: ['ally'], 1029: ['enemy'], 1030: ['enemy'], 1031: ['enemy'], 1032: ['enemy'], 1033: ['enemy'], 1034: ['none'], 1035: ['enemy'] };
 TARG[1210]=['ally']; TARG[1228]=['ally'];
 const HELP = {
-  'いずみのみず': '味方1人のHP+30', 'にがいお茶': '味方1人の次の攻撃ダメージ+30', 'つちのかたまり': '味方1人のぼうぎょ+30（このターン）', 'かみなりのたね': '味方1人のすばやさ+30（このターン）', 'かんぽうゼリー': '味方1人の状態異常を1つ解除', '流れる魔力': 'このターン味方の技必要MP−1', '止められた魔力': 'このターン敵の技必要MP+1', 'まほうの甲冑': 'このターン味方フィールド全員の敵攻撃を防ぐ（1戦1回）', 'ひらめきの一手': '手札をランダム1枚捨て、1枚引く', 'ヒメアオホノカ': '味方フィールド全員のHP+10（簡易裁定）', '市販結界装置': '味方のキャラクター1人を選ぶ。そのキャラクターが次に受ける攻撃を防ぐ。ただし、その攻撃がやみカードを用いる攻撃の場合、ダメージ半減にとどまる。'
+  'いずみのみず': '味方1人のHP+30', 'にがいお茶': '味方1人の次の攻撃ダメージ+30', 'つちのかたまり': '味方1人のぼうぎょ+30（このターン）', 'かみなりのたね': '味方1人のすばやさ+30（このターン）', 'かんぽうゼリー': '味方1人の状態異常を1つ解除', '流れる魔力': 'このターン味方の技必要MP−1', '止められた魔力': 'このターン敵の技必要MP+1', 'まほうの甲冑': 'このターン味方フィールド全員の敵攻撃を防ぐ（1戦1回）', 'ひらめきの一手': '手札をランダム1枚捨て、1枚引く', 'ヒメアオホノカ': '味方フィールド全員のHP+10（簡易裁定）', '市販結界装置': '味方のキャラクター1人を選ぶ。そのキャラクターが次に受ける攻撃を防ぐ。ただし、その攻撃がやみカードを用いる攻撃の場合、ダメージ半減にとどまる。', [EXCEED_CARD]: 'ターン開始時に手札または捨て札から発動。対象はゲーム中1回まで。4つの効果から1つを選ぶ。'
 };
 const AI_ACTION_DELAY_MS = 1400;
 const ACTION_REVEAL_DELAY_MS = 450;
@@ -186,9 +187,9 @@ function heroName(h) { return h?.name || '対象' }
 function mkRuntime(id, side) { let c = HERO_MAP[id]; return { uid: side + '_' + id, id, baseId: Number.isInteger(c.baseId) ? c.baseId : id, name: c.name, maxHp: c.hp, hp: c.hp, baseA: c.attack, baseD: c.defense, baseS: c.speed, buffs: [], marks: 0, nextBarrier: 0, nextCommercialBarrier: 0, burn: 0, poison: 0, sleep: 0, confusion: 0, charm: 0, combustion: 0, banSkills: 0, banAttackTurn: -1, skipNextAction: 0, nextIn: [], nextOut: [], nextHalf: 0, immuneTurn: -1, shieldTurn: -1, tauntTurn: -1, entered: false, enteredTurn: 0, wasInFieldPreviousTurn: false, acted: false, turnStartHp: c.hp, damageTakenThisTurn: 0, fukutsuUsed: false, actionNameCursor: 0, flags: {}, usedSkills: {}, traitUses: 0, deathProcessed: false, side } }
 function buildDeck(ids) {
   let specials = [...new Set(ids.flatMap(id => HERO_MAP[id].skills.flatMap(s => s.special)))]; let cards = [];
-  if (specials.length) { cards.push(...Array(14).fill('1MP'), ...Array(9).fill('2MP'), ...Array(6).fill('3MP')); let spec = Array.from({ length: 20 }, (_, i) => specials[i % specials.length] + 'カード'); cards.push(...spec) }
-  else cards.push(...Array(21).fill('1MP'), ...Array(16).fill('2MP'), ...Array(12).fill('3MP'));
-  // 11補助カード：全種類各1枚。60枚を維持するため3MPカードを1枚減らす。
+  if (specials.length) { cards.push(...Array(14).fill('1MP'), ...Array(9).fill('2MP'), ...Array(5).fill('3MP')); let spec = Array.from({ length: 20 }, (_, i) => specials[i % specials.length] + 'カード'); cards.push(...spec) }
+  else cards.push(...Array(21).fill('1MP'), ...Array(16).fill('2MP'), ...Array(11).fill('3MP'));
+  // 12補助カード：全種類各1枚。60枚を維持するため3MPカードを調整する。
   cards.push(...SUPPORTS); if (cards.length !== 60) throw Error('deck length ' + cards.length);
   return shuffled(cards)
 }
@@ -215,6 +216,9 @@ function draw(side, n = 1) { let p = game.players[side]; for (let i = 0; i < n; 
 function searchDeck(side, fn) { let deck = game.players[side].deck, idx = deck.findIndex(fn); if (idx < 0) return false; let card = deck.splice(idx, 1)[0]; game.players[side].hand.push(card); game.players[side].deck = shuffled(deck); log(`${side ? '赤' : '青'}：山札から${card}を獲得`); return true }
 function buff(h, stat, amount, next = 1) { h.buffs.push({ stat, amount, until: game.turn + next }); if (amount < 0 && typeof sourceOnDebuff === 'function') sourceOnDebuff(h); if(amount<0&&typeof enemy1100OnDebuff==='function')enemy1100OnDebuff(h); if(amount<0&&typeof challenge2OnDebuff==='function')challenge2OnDebuff(h) }
 function stat(h, s) {
+  if (!h) return 0;
+  if (h.exceedPenaltyTurn === game.turn) return 0;
+  if (h.exceedLiberate?.turn === game.turn && h.exceedLiberate.stats?.[s] !== undefined) return h.exceedLiberate.stats[s];
   let b = s === 'attack' ? h.baseA : s === 'defense' ? h.baseD : h.baseS; b += h.buffs.filter(x => x.stat === s && x.until >= game.turn).reduce((a, x) => a + x.amount, 0);
   if (s === 'defense' && baseCardId(h) === 1029 && others(ownerOf(h)).some(e => e.combustion)) b += 10;
   if (typeof sourceStatBonus === 'function') b += (sourceStatBonus(h, s) || 0); if(typeof enemy1100StatBonus==='function')b+=(enemy1100StatBonus(h,s)||0); if(typeof challenge2StatBonus==='function')b+=(challenge2StatBonus(h,s)||0);
@@ -275,7 +279,7 @@ function rawAttackBonus(actor, target, side) {
 }
 function queueDeathTrait(h) { let c = HERO_MAP[h.id]; if (!c || !(/死んだとき|HPが0以下になったとき/.test(c.trait || ''))) return; if (!game.pendingDeathTraits) game.pendingDeathTraits = []; game.pendingDeathTraits.push({ actorUid: h.uid, skillName: '死亡時とくせい：' + c.traitName, description: c.trait, targetUid: game.players[ownerOf(h)].team.find(x => x.hp > 0)?.uid || game.players[1 - ownerOf(h)].team.find(x => x.hp > 0)?.uid || null, consumeAction: false, deathTrigger: true }); log(`死亡時効果：${h.name}「${c.traitName}」の処理待ち`) }
 function triggerDeathTrait(h) { if (h.deathProcessed) return; h.deathProcessed = true; let c = HERO_MAP[h.id]; if (!c) return; if (c.traitName === 'やみへのさそい') { let side = ownerOf(h), names = new Set((c.skills || []).map(x => x.name)); let targets = field(1 - side).filter(x => x.hp > 0 && (HERO_MAP[x.id]?.skills || []).some(sk => names.has(sk.name))); if (targets.length) { let target = targets[rand(targets.length)]; log(`死亡時効果：${h.name}「やみへのさそい」→ 共通の技を持つ${target.name}を道連れにする`); updateHp(target, -target.hp) } else log(`死亡時効果：${h.name}「やみへのさそい」対象なし`); return } queueDeathTrait(h) }
-function updateHp(h, val) { if (!h || !game) return; let wasAlive = h.hp > 0, oldHp = h.hp; h.hp = Math.max(0, Math.min(h.maxHp, h.hp + val)); if (val < 0 && wasAlive) { h.damageTakenThisTurn = (h.damageTakenThisTurn || 0) + Math.min(oldHp, -val); const trait = HERO_MAP[h.id]?.traitName; if (trait === 'ふくつのこころ' && !h.fukutsuUsed && h.turnStartHp > 0 && h.hp < h.turnStartHp / 2) { h.fukutsuUsed = true; const recovery = Math.floor((h.damageTakenThisTurn || 0) / 2); if (recovery > 0) { const before = h.hp; h.hp = Math.min(h.maxHp, h.hp + recovery); log(`とくせい：${h.name}「ふくつのこころ」HP ${before} → ${h.hp}（このターンの被ダメージの半分を回復）`) } } } if (val < 0 && wasAlive) h.flags.lastHitTurn=game.turn; if (wasAlive && h.hp === 0) { for (let p of game.players) p.field = p.field.filter(u => u !== h.uid); log(`退場：${h.name}が墓場へ`); triggerDeathTrait(h) } }
+function updateHp(h, val) { if (!h || !game) return; let wasAlive = h.hp > 0, oldHp = h.hp; if (val < 0 && wasAlive && h.exceedConvertTurn === game.turn) { const prevented = -val; h.exceedConvertDamage = Number(h.exceedConvertDamage || 0) + prevented; const before = h.hp; h.hp = Math.min(h.maxHp, h.hp + prevented); log('吸転換（コンバート）：' + h.name + 'が' + prevented + 'ダメージを無効化し、HPを' + (h.hp - before) + '回復'); return } h.hp = Math.max(0, Math.min(h.maxHp, h.hp + val)); if (val < 0 && wasAlive) { h.damageTakenThisTurn = (h.damageTakenThisTurn || 0) + Math.min(oldHp, -val); const trait = HERO_MAP[h.id]?.traitName; if (trait === 'ふくつのこころ' && !h.fukutsuUsed && h.turnStartHp > 0 && h.hp < h.turnStartHp / 2) { h.fukutsuUsed = true; const recovery = Math.floor((h.damageTakenThisTurn || 0) / 2); if (recovery > 0) { const before = h.hp; h.hp = Math.min(h.maxHp, h.hp + recovery); log(`とくせい：${h.name}「ふくつのこころ」HP ${before} → ${h.hp}（このターンの被ダメージの半分を回復）`) } } } if (val < 0 && wasAlive) h.flags.lastHitTurn=game.turn; if (wasAlive && h.hp === 0) { for (let p of game.players) p.field = p.field.filter(u => u !== h.uid); log(`退場：${h.name}が墓場へ`); triggerDeathTrait(h) } }
 function directDamage(attacker, target, amount, reason = '確定ダメージ', isAttack = false) {
   if (!target || target.hp <= 0) return 0; if (attacker) target = forceTauntTarget(attacker, target); if (!target || target.hp <= 0) return 0; let dmg = amount; if(typeof challenge2FixedDamageBonus==='function')dmg=challenge2FixedDamageBonus(attacker,target,dmg,reason); if(dmg>0&&(target.skillDamageReduceUntil||-1)>=game.turn){dmg=Math.max(0,dmg-10);if(typeof enemy1100DefenseTrigger==='function')enemy1100DefenseTrigger(ownerOf(target));}
   if (isAttack) { dmg = applyDefencesSync(attacker, target, dmg, reason) }
@@ -366,7 +370,7 @@ function finish(winner) {
   log(winner < 0 ? '引き分け' : `${winner === 0 ? '青' : '赤'}側の勝利！`); render(); persist()
 }
 function startMatch() {
-  game = { mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy', challenge: Number.isInteger(challengeRunStage) ? { id: challengeRunLevel, stage: challengeRunStage, formation: (challengeRunLevel==='challenge2'?CHALLENGE2_ORDER:CHALLENGE1_ORDER)[challengeRunStage], progressRecorded: false } : null, phase: 'select', turn: 0, players: [makePlayer(0), makePlayer(1)], log: [], counterThisTurn: [0, 0], planned: [null, null], currentSelectSide: 0, order: [], current: null, winner: null, pendingDeathTraits: [], actionNameCharLog: [], lastSkillSpecial: [], lastSkillNameBySide: [], lastSpecialUsedBySide: [[], []] };
+  game = { mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy', challenge: Number.isInteger(challengeRunStage) ? { id: challengeRunLevel, stage: challengeRunStage, formation: (challengeRunLevel==='challenge2'?CHALLENGE2_ORDER:CHALLENGE1_ORDER)[challengeRunStage], progressRecorded: false } : null, phase: 'select', turn: 0, players: [makePlayer(0), makePlayer(1)], exceedUsedTargets: [[], []], log: [], counterThisTurn: [0, 0], planned: [null, null], currentSelectSide: 0, order: [], current: null, winner: null, pendingDeathTraits: [], actionNameCharLog: [], lastSkillSpecial: [], lastSkillNameBySide: [], lastSpecialUsedBySide: [[], []] };
   for (let side = 0; side < 2; side++) { if (validateDeckArray(deckSlots[side])) log(`${side ? '赤' : '青'}：保存済みの60枚カスタムデッキを使用`); draw(side, 5); }
   for (let side = 0; side < 2; side++)for (let h of game.players[side].team) { let tr = HERO_MAP[h.id]?.traitEffect; if (tr === 'opening_draw') draw(side, 1) }
   if (typeof sourceStartMatch === 'function') sourceStartMatch(); if(typeof enemy1100StartMatch==='function')enemy1100StartMatch(); if(typeof challenge2StartMatch==='function')challenge2StartMatch();
@@ -378,6 +382,8 @@ function commitSelection(side, uidList) {
   if (uidList.some(uid => !alive(side).some(h => h.uid === uid))) return alert('選択に誤りがあります');
 
   let requiredTaunts = game.players[side].team.filter(h => h.hp > 0 && h.tauntTurn === game.turn);
+  let requiredExceed = game.players[side].team.filter(h => h.hp > 0 && h.exceedPenaltyTurn === game.turn);
+  if (requiredExceed.some(h => !uidList.includes(h.uid))) { alert('超過機構の共通効果により、このターンは対象キャラクターを必ず出場させてください。'); render(); return; }
   if (requiredTaunts.some(h => !uidList.includes(h.uid))) {
     if (typeof plannedChoices !== 'undefined') plannedChoices = uidList.slice();
     alert('みがわりの効果中は、そのキャラクターを必ず出場させてください。');
@@ -493,7 +499,58 @@ function onEnter(h) {
 }
 function officialTraitFormation(side) { const f = field(side); if (f.length !== 3) return; for (const h of f) { const tn = traitNameOf(h); if (tn === 'じつはリーダー') for (const x of f) buff(x, 'defense', 10, 0); if (tn === 'じつはサブリーダー') for (const x of f) buff(x, 'attack', 10, 0); if (tn === 'じつはむしょく' && !h.officialMaxHpBoosted) { for (const x of f) { x.maxHp += 10; x.hp = Math.min(x.maxHp, x.hp + 10) } h.officialMaxHpBoosted = true; log('とくせい「じつはむしょく」：味方全員の最大HP＋10') } } }
 function beginTurn() {
-  game.phase = 'acting'; for (let s = 0; s < 2; s++) { let p = game.players[s], old = p.field.slice(); for (let h of p.team) h.wasInFieldPreviousTurn = old.includes(h.uid); p.field = game.planned[s].slice(); for (let h of field(s)) if (!old.includes(h.uid)) onEnter(h) }
+  game.phase = 'acting';
+  for (let s = 0; s < 2; s++) { let p = game.players[s], old = p.field.slice(); for (let h of p.team) h.wasInFieldPreviousTurn = old.includes(h.uid); p.field = game.planned[s].slice(); for (let h of field(s)) if (!old.includes(h.uid)) onEnter(h) }
+  game.exceedFlow = { sides: game.mode === 'ai' ? [0] : [0, 1], index: 0 };
+  if (advanceExceedPrompt()) return;
+  resolveBeginTurn();
+}
+function advanceExceedPrompt() {
+  if (!game || !game.exceedFlow) return false;
+  while (game.exceedFlow.index < game.exceedFlow.sides.length) {
+    const side = game.exceedFlow.sides[game.exceedFlow.index], p = game.players[side];
+    const hasCard = p.hand.includes(EXCEED_CARD) || p.discard.includes(EXCEED_CARD);
+    const used = game.exceedUsedTargets[side] || [];
+    const targets = field(side).filter(h => h.hp > 0 && !used.includes(h.uid));
+    if (!hasCard || !targets.length) { game.exceedFlow.index++; continue; }
+    game.exceedPrompt = { side: side, cardSource: null, targetUid: null, ready: !(game.mode === 'local' && side === 1) };
+    log((side ? '赤' : '青') + '側：超過機構（イクシードチャージ）の発動を選択できます');
+    render(); persist(); return true;
+  }
+  game.exceedPrompt = null; game.exceedFlow = null; return false;
+}
+function finishExceedPrompt() {
+  if (!game || !game.exceedPrompt || !game.exceedFlow) return;
+  game.exceedPrompt = null; game.exceedFlow.index++;
+  if (!advanceExceedPrompt()) resolveBeginTurn(); else { render(); persist(); }
+}
+function activateExceedCard(source, targetUid, mode) {
+  const prompt = game && game.exceedPrompt;
+  if (!prompt || !['hand', 'discard'].includes(source) || !['common', 'reject', 'convert', 'liberate'].includes(mode)) return;
+  const side = prompt.side, p = game.players[side], target = p.team.find(h => h.uid === targetUid);
+  const pile = source === 'hand' ? p.hand : p.discard, idx = pile.indexOf(EXCEED_CARD);
+  if (idx < 0 || !target || target.hp <= 0 || !field(side).some(h => h.uid === target.uid)) return;
+  const used = game.exceedUsedTargets[side] || (game.exceedUsedTargets[side] = []);
+  if (used.includes(target.uid)) return;
+  if (source === 'hand') { p.hand.splice(idx, 1); p.discard.push(EXCEED_CARD); }
+  used.push(target.uid);
+  if (mode === 'common') {
+    target.exceedPenaltyTurn = game.turn + 1;
+    log('超過機構：' + target.name + 'に共通効果。次のターン、HP以外の全ステータス0・行動不可・ベンチへ戻れない');
+  } else if (mode === 'reject') {
+    target.exceedRejectTurn = game.turn;
+    log('超過機構：' + target.name + 'に超排撃（リジェクト）。このターン、持ち技の効果を2回解決する');
+  } else if (mode === 'convert') {
+    target.exceedConvertTurn = game.turn; target.exceedConvertDamage = 0;
+    log('超過機構：' + target.name + 'に吸転換（コンバート）。このターンの被HPダメージを無効化し、同量回復する');
+  } else {
+    const stats = { attack: stat(target, 'attack') * 2, defense: stat(target, 'defense') * 2, speed: stat(target, 'speed') * 2 };
+    target.hp = target.maxHp; target.exceedLiberate = { turn: game.turn, stats: stats };
+    log('超過機構：' + target.name + 'に賦活醒（リベレト）。HP全回復、現在の実効ステータスを2倍');
+  }
+  finishExceedPrompt();
+}
+function resolveBeginTurn() {
   if(typeof enemy1100TurnStart==='function')enemy1100TurnStart(); if(typeof challenge2TurnStart==='function')challenge2TurnStart();
   // マリナ「完全解析」：そのターンの配置確定後、味方の防御が最も低い1人を強化する。
   for (let side = 0; side < 2; side++) {
@@ -508,6 +565,7 @@ function beginTurn() {
   for (let s = 0; s < 2; s++)officialTraitFormation(s);
   // ステータス異常を場のキャラにのみ適用、行動順の前に解決。
   for (let s = 0; s < 2; s++)for (let h of field(s).slice()) { if (h.burn) directDamage(null, h, h.burn * 5, 'やけどの継続ダメージ', false); if (h.poison) directDamage(null, h, h.poison * 5, 'どくの継続ダメージ', false); if (h.confusion) { directDamage(null, h, 10 * Math.min(2, h.confusion), 'こんらんの継続ダメージ', false); h.confusion = Math.max(0, h.confusion - 1) } }
+  for (let s = 0; s < 2; s++) for (let h of field(s)) if (h.exceedPenaltyTurn === game.turn) { h.acted = true; log(h.name + 'は共通効果によりステータス0・行動不能'); }
   if (processDeathQueue()) return; if (checkVictory()) return; log(`両軍の配置が確定。素早さ順に行動`); nextActor()
 }
 function availableActors() { return [0, 1].flatMap(s => field(s).filter(h => !h.acted).map(h => ({ side: s, unit: h }))) }
@@ -525,6 +583,13 @@ function nextActor() {
   if (game.mode === 'ai' && s === 1) { game.actionBanner = { side: s, actorUid: h.uid, actorName: h.name, skillName: '行動を選択中…', description: 'AIが使用する技と対象を判断しています。', status: '思考中', resultLines: [] }; render(); persist(); setTimeout(() => takeAiAction(), AI_ACTION_DELAY_MS) } else { render(); persist() }
 }
 function endRound() {
+  for (let side = 0; side < 2; side++) for (const h of game.players[side].team) {
+    if (h.exceedConvertTurn === game.turn) { const count = Math.floor(Number(h.exceedConvertDamage || 0) / 20); if (count > 0) { game.players[side].hand.push(...Array(count).fill('1MP')); log('吸転換：' + h.name + 'が受け止めたダメージに応じて1MPカードを' + count + '枚獲得'); } }
+    if (h.exceedPenaltyTurn !== undefined && h.exceedPenaltyTurn <= game.turn) delete h.exceedPenaltyTurn;
+    if (h.exceedRejectTurn !== undefined && h.exceedRejectTurn <= game.turn) delete h.exceedRejectTurn;
+    if (h.exceedConvertTurn !== undefined && h.exceedConvertTurn <= game.turn) { delete h.exceedConvertTurn; delete h.exceedConvertDamage; }
+    if (h.exceedLiberate && h.exceedLiberate.turn <= game.turn) delete h.exceedLiberate;
+  }
   if (typeof sourceEndRound === 'function') sourceEndRound(); if(typeof enemy1100EndRound==='function')enemy1100EndRound(); if(typeof challenge2EndRound==='function')challenge2EndRound(); for (let s = 0; s < 2; s++) { let p = game.players[s]; for (let h of p.team) h.buffs = h.buffs.filter(b => b.until > game.turn) }
   // 戦闘終了条件：そのターン終了時、フィールド上の味方が全員倒れていた側が敗北。
   let lose0 = game.planned[0].every(uid => game.players[0].team.find(h => h.uid === uid)?.hp <= 0), lose1 = game.planned[1].every(uid => game.players[1].team.find(h => h.uid === uid)?.hp <= 0); if (lose0 || lose1) { finish(lose0 && lose1 ? -1 : lose0 ? 1 : 0); return }
@@ -574,7 +639,14 @@ async function actSkill(h, index, target) {
   if (target && skill.special.includes('水') && traitNameOf(target) === '地に足うまってる') { log(`とくせい：${target.name}「地に足うまってる」が水カードの効果を無効化`); rememberLastSkillUse(side, skill); game.actionBanner.status = '処理完了'; game.actionBanner.resultLines = game.log.slice(0, 6).reverse(); waiting = false; render(); persist(); await pause(ACTION_RESULT_DELAY_MS); endAction(h); return }
   if (skill.special.length) { for (let x of field(side)) if (baseCardId(x) === 1027 && claim(x, 'flameHeal')) heal(h, 10) }
   if (typeof sourceOnSkillCast === 'function') sourceOnSkillCast(h, target); if(typeof enemy1100OnSkillCast==='function')enemy1100OnSkillCast(h,target); if(typeof challenge2OnSkillCast==='function')challenge2OnSkillCast(h,target);
-  try { let manual = await skillEffect(h, index, target); if (manual) { rememberLastSkillUse(side, skill); if (game.actionBanner) game.actionBanner.status = '手動処理待ち'; waiting = false; render(); persist(); return } } catch (e) { console.error(e); log('効果処理にエラーが発生：' + e.message) }
+  try {
+    let manual = await skillEffect(h, index, target);
+    if (!manual && game.phase !== 'ended' && h.exceedRejectTurn === game.turn) {
+      if (target && target.hp <= 0) log('超排撃（リジェクト）：同じ対象の' + target.name + 'が効果を受けられないため、2回目は不発');
+      else { log('超排撃（リジェクト）：' + h.name + '「' + skill.name + '」の効果を2回目として解決'); manual = await skillEffect(h, index, target); }
+    }
+    if (manual) { rememberLastSkillUse(side, skill); if (game.actionBanner) game.actionBanner.status = '手動処理待ち'; waiting = false; render(); persist(); return; }
+  } catch (e) { console.error(e); log('効果処理にエラーが発生：' + e.message) }
   rememberLastSkillUse(side, skill); if (game.actionBanner?.actorUid === h.uid) { game.actionBanner.status = '処理完了'; game.actionBanner.resultLines = game.log.slice(0, 6).reverse(); render(); persist(); await pause(ACTION_RESULT_DELAY_MS) } waiting = false; endAction(h)
 }
 function rememberLastSkillUse(side, skill) { game.lastSkillSpecial = skill?.special || []; game.lastSkillSide = side; game.lastSkillName = skill?.name || ''; game.lastSkillNameBySide = game.lastSkillNameBySide || []; game.lastSkillNameBySide[side] = game.lastSkillName; game.lastLeafSkillUsed = (skill?.special || []).includes('葉っぱ'); }
@@ -792,6 +864,7 @@ function restore() {
     let saved = JSON.parse(localStorage.getItem(LSKEY) || 'null');
     if (saved?.players?.length === 2 && ['select', 'acting', 'handoff', 'ended'].includes(saved.phase)) {
       game = saved;
+      game.exceedUsedTargets = Array.isArray(game.exceedUsedTargets) ? game.exceedUsedTargets : [[], []];
       delete game.pendingArmor;
       game.pendingDeathTraits = game.pendingDeathTraits || [];
       game.log = Array.isArray(game.log) ? game.log : [];
