@@ -95,7 +95,7 @@ function renderSupportPanel() {
     if (!q) return '';
     const side = q.side, p = game.players[side];
     if (!q.ready) return `<div class="veil high"><section class="modal support-declaration-modal"><p class="eyebrow">PASS THE DEVICE</p><h2>${sideLabel(side)}の補助カード宣言</h2><p>端末を${sideLabel(side)}側へ渡してから、手札を確認してください。</p><button class="primary-btn" data-act="supportResume">確認して続ける</button></section></div>`;
-    const cards = [...new Set(p.hand.filter(c => SUPPORTS.includes(c) && c !== EXCEED_CARD))];
+    const cards = [...new Set(p.hand.filter(c => SUPPORTS.includes(c) && c !== EXCEED_CARD && !(c === 'まほうの甲冑' && p.usedMagicArmor)))];
     const targets = field(side).filter(h => h.hp > 0);
     const needsTarget = q.cardName && targetOfAssist(q.cardName) === 'ally';
     const canDeclare = !!q.cardName && (!needsTarget || !!q.targetUid);
@@ -214,7 +214,7 @@ async function handleAction(el) {
         case 'startP2': game.phase = 'select'; game.currentSelectSide = 1; plannedChoices = []; render(); return;
         case 'resume': passPending = false; render(); return;
         case 'supportResume': if (game?.supportPrompt) { game.supportPrompt.ready = true; render(); persist(); } return;
-        case 'supportCard': if (game?.supportPrompt && game.players[game.supportPrompt.side].hand.includes(el.dataset.name) && SUPPORTS.includes(el.dataset.name) && el.dataset.name !== EXCEED_CARD) { game.supportPrompt.cardName = el.dataset.name; game.supportPrompt.targetUid = null; render(); persist(); } return;
+        case 'supportCard': if (game?.supportPrompt && game.players[game.supportPrompt.side].hand.includes(el.dataset.name) && SUPPORTS.includes(el.dataset.name) && el.dataset.name !== EXCEED_CARD && !(el.dataset.name === 'まほうの甲冑' && game.players[game.supportPrompt.side].usedMagicArmor)) { game.supportPrompt.cardName = el.dataset.name; game.supportPrompt.targetUid = null; render(); persist(); } return;
         case 'supportTarget': if (game?.supportPrompt && game.supportPrompt.cardName && targetOfAssist(game.supportPrompt.cardName) === 'ally') { const side = game.supportPrompt.side, target = game.players[side].team.find(x => x.uid === el.dataset.uid); if (target && target.hp > 0 && field(side).some(x => x.uid === target.uid)) { game.supportPrompt.targetUid = target.uid; render(); persist(); } } return;
         case 'supportDeclare': if (game?.supportPrompt?.cardName) { const q = game.supportPrompt, target = q.targetUid ? game.players[q.side].team.find(x => x.uid === q.targetUid) : null; if (targetOfAssist(q.cardName) === 'ally' && !target) return; startAssist(q.side, q.cardName, target); } return;
         case 'supportSkip': finishSupportPrompt(); return;
