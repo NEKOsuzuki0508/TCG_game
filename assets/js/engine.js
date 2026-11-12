@@ -501,9 +501,29 @@ function officialTraitFormation(side) { const f = field(side); if (f.length !== 
 function beginTurn() {
   game.phase = 'acting';
   for (let s = 0; s < 2; s++) { let p = game.players[s], old = p.field.slice(); for (let h of p.team) h.wasInFieldPreviousTurn = old.includes(h.uid); p.field = game.planned[s].slice(); for (let h of field(s)) if (!old.includes(h.uid)) onEnter(h) }
+  game.supportFlow = { sides: game.mode === 'ai' ? [0] : [0, 1], index: 0 };
+  if (advanceSupportPrompt()) return;
+  beginExceedPrompts();
+}
+function advanceSupportPrompt() {
+  if (!game || !game.supportFlow) return false;
+  while (game.supportFlow.index < game.supportFlow.sides.length) {
+    const side = game.supportFlow.sides[game.supportFlow.index], p = game.players[side];
+    if (p.assistUsed || !p.hand.some(c => SUPPORTS.includes(c) && c !== EXCEED_CARD)) { game.supportFlow.index++; continue; }
+    game.supportPrompt = { side, cardName: null, targetUid: null, ready: !(game.mode === 'local' && side === 1) };
+    log((side ? '赤' : '青') + '側：補助カードの使用宣言');
+    render(); persist(); return true;
+  }
+  game.supportPrompt = null; game.supportFlow = null; return false;
+}
+function finishSupportPrompt() {
+  if (!game || !game.supportPrompt || !game.supportFlow) return;
+  game.supportPrompt = null; game.supportFlow.index++;
+  if (!advanceSupportPrompt()) beginExceedPrompts(); else { render(); persist(); }
+}
+function beginExceedPrompts() {
   game.exceedFlow = { sides: game.mode === 'ai' ? [0] : [0, 1], index: 0 };
-  if (advanceExceedPrompt()) return;
-  resolveBeginTurn();
+  if (!advanceExceedPrompt()) resolveBeginTurn();
 }
 function advanceExceedPrompt() {
   if (!game || !game.exceedFlow) return false;
@@ -849,12 +869,13 @@ function applyManualChange(op, targetUid, amount) {
 async function finishManual() { let p = game?.manualPending; if (!p) return; let h = game.players.flatMap(x => x.team).find(x => x.uid === p.actorUid); game.manualPending = null; log('手動裁定完了：' + (p.skillName || '効果処理')); if (game.actionBanner) { game.actionBanner.status = '処理完了'; game.actionBanner.resultLines = game.log.slice(0, 6).reverse() }; if (p.deathTrigger) { render(); persist(); await pause(ACTION_RESULT_DELAY_MS); if (processDeathQueue()) return; if (!checkVictory() && game.phase === 'acting') nextActor(); render(); persist(); return } if (h && p.exceedRepeat) { const target = p.exceedRepeat.targetUid ? game.players.flatMap(x => x.team).find(x => x.uid === p.exceedRepeat.targetUid) : null; if (p.exceedRepeat.targetUid && (!target || target.hp <= 0 || !field(ownerOf(target)).some(x => x.uid === target.uid))) log('超排撃（リジェクト）：同じ対象が効果を受けられないため、2回目は不発'); else { log('超排撃（リジェクト）：手動処理した技の効果を2回目として解決'); waiting = true; const manual = await skillEffect(h, p.exceedRepeat.skillIndex, target); if (manual) { rememberLastSkillUse(ownerOf(h), HERO_MAP[h.id].skills[p.exceedRepeat.skillIndex]); if (game.actionBanner) game.actionBanner.status = '手動処理待ち'; waiting = false; render(); persist(); return; } } } if (h && p.consumeAction) { render(); persist(); waiting = true; await pause(ACTION_RESULT_DELAY_MS); waiting = false; endAction(h) } else if (game.pendingDeathTraits?.length) processDeathQueue(); else { checkVictory(); render(); persist() } }
 
 function startAssist(side, name, target) {
-  if (waiting || game.phase !== 'acting' || !game.current || game.current.side !== side) return; let p = game.players[side]; if (p.assistUsed) return;
+  const declaration = game?.supportPrompt;
+  if (waiting || game.phase !== 'acting' || !declaration || declaration.side !== side || declaration.cardName !== name) return; let p = game.players[side]; if (p.assistUsed) return;
   let idx = p.hand.indexOf(name); if (idx < 0) return;
   if (name === 'まほうの甲冑' && p.usedMagicArmor) { alert('まほうの甲冑は1試合に1回です'); return }
   p.hand.splice(idx, 1); p.discard.push(name); p.assistUsed = true; selected = null; log(`${side ? '赤' : '青'} 補助：「${name}」`);
   switch (name) { case 'いずみのみず': heal(target, 30); break; case 'にがいお茶': extraAttack(target, 30); break; case 'つちのかたまり': buff(target, 'defense', 30, 0); break; case 'かみなりのたね': buff(target, 'speed', 30, 0); break; case 'かんぽうゼリー': cure(target); break; case '流れる魔力': p.mpMod -= 1; break; case '止められた魔力': game.players[1 - side].mpMod += 1; break; case 'まほうの甲冑': p.usedMagicArmor = true; field(side).forEach(x => x.shieldTurn = game.turn); break; case '市販結界装置': if (target) { target.nextCommercialBarrier = (target.nextCommercialBarrier || 0) + 1; log(`市販結界装置：${target.name}に次の攻撃を防ぐ結界を付与（やみカード攻撃は半減）`) } break; case 'ひらめきの一手': if (p.hand.length) { let j = rand(p.hand.length); p.discard.push(...p.hand.splice(j, 1)) } draw(side); break; case 'ヒメアオホノカ': field(side).forEach(h => heal(h, 10)); break; }
-  render(); persist()
+  finishSupportPrompt(); render(); persist()
 }
 function targetOfAssist(name) { return ['いずみのみず', 'にがいお茶', 'つちのかたまり', 'かみなりのたね', 'かんぽうゼリー', '市販結界装置'].includes(name) ? 'ally' : 'none' }
 function saveConfig() { try { localStorage.setItem('tcg_vivid_config', JSON.stringify({ picks: config.picks, mode: config.mode, aiDifficulty: config.aiDifficulty || 'easy' })) } catch (e) { } if (typeof accountMarkDirty === 'function') accountMarkDirty() }
