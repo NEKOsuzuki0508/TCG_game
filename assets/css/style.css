@@ -3079,3 +3079,16 @@ a {
 
 /* Challenge quest progression */
 .challenge-stage-list{display:grid;gap:12px;margin:18px 0}.challenge-stage{display:grid;grid-template-columns:54px minmax(0,1fr) auto;align-items:center;gap:16px;padding:18px}.challenge-stage-number{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(130,160,210,.14);font-weight:800;font-size:18px}.challenge-stage-info h2{margin:2px 0 4px}.challenge-stage-info p:last-child{margin:0;color:var(--muted,#9aa8bc)}.challenge-stage.is-cleared{border-color:rgba(90,190,145,.5)}.challenge-stage.is-cleared .challenge-stage-number{background:rgba(70,180,130,.18);color:#75d5a5}.challenge-stage.is-locked{opacity:.55}.challenge-stage-action{min-width:116px;text-align:right}.clear-label{color:#75d5a5;font-weight:700}.locked-label{color:var(--muted,#9aa8bc);font-size:13px}.challenge-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:18px 0 30px;padding:14px 18px;border-top:1px solid var(--line,rgba(255,255,255,.12))}.challenge-footer b{font-size:20px;margin-left:8px}@media(max-width:620px){.challenge-stage{grid-template-columns:42px minmax(0,1fr);gap:10px;padding:14px}.challenge-stage-number{width:38px;height:38px}.challenge-stage-action{grid-column:2;text-align:left}.challenge-footer{align-items:flex-start;flex-direction:column}}
+
+
+/* 超過機構（イクシードチャージ） */
+.exceed-modal { width: min(760px, 100%); }
+.exceed-step { margin: 16px 0; padding: 12px; border: 1px solid #35516b; border-radius: 12px; background: #102238; }
+.exceed-step > b { display: block; margin-bottom: 9px; color: #d8e8f5; }
+.exceed-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.exceed-options button { border: 1px solid #47647d; border-radius: 9px; padding: 9px 12px; background: #1a3047; color: #e7f2fb; text-align: left; }
+.exceed-options button.selected { border-color: #f2c879; background: #4b402e; }
+.exceed-options button:disabled { opacity: .4; }
+.exceed-modes button { flex: 1 1 45%; min-width: 220px; }
+.exceed-modes button b, .exceed-modes button small { display: block; }
+.exceed-modes button small { margin-top: 5px; color: #b4c8d8; line-height: 1.5; }
