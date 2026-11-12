@@ -583,6 +583,7 @@ function nextActor() {
   if (game.mode === 'ai' && s === 1) { game.actionBanner = { side: s, actorUid: h.uid, actorName: h.name, skillName: '行動を選択中…', description: 'AIが使用する技と対象を判断しています。', status: '思考中', resultLines: [] }; render(); persist(); setTimeout(() => takeAiAction(), AI_ACTION_DELAY_MS) } else { render(); persist() }
 }
 function endRound() {
+  if (typeof sourceEndRound === 'function') sourceEndRound(); if(typeof enemy1100EndRound==='function')enemy1100EndRound(); if(typeof challenge2EndRound==='function')challenge2EndRound();
   for (let side = 0; side < 2; side++) for (const h of game.players[side].team) {
     if (h.exceedConvertTurn === game.turn) { const count = Math.floor(Number(h.exceedConvertDamage || 0) / 20); if (count > 0) { game.players[side].hand.push(...Array(count).fill('1MP')); log('吸転換：' + h.name + 'が受け止めたダメージに応じて1MPカードを' + count + '枚獲得'); } }
     if (h.exceedPenaltyTurn !== undefined && h.exceedPenaltyTurn <= game.turn) delete h.exceedPenaltyTurn;
@@ -590,7 +591,7 @@ function endRound() {
     if (h.exceedConvertTurn !== undefined && h.exceedConvertTurn <= game.turn) { delete h.exceedConvertTurn; delete h.exceedConvertDamage; }
     if (h.exceedLiberate && h.exceedLiberate.turn <= game.turn) delete h.exceedLiberate;
   }
-  if (typeof sourceEndRound === 'function') sourceEndRound(); if(typeof enemy1100EndRound==='function')enemy1100EndRound(); if(typeof challenge2EndRound==='function')challenge2EndRound(); for (let s = 0; s < 2; s++) { let p = game.players[s]; for (let h of p.team) h.buffs = h.buffs.filter(b => b.until > game.turn) }
+  for (let s = 0; s < 2; s++) { let p = game.players[s]; for (let h of p.team) h.buffs = h.buffs.filter(b => b.until > game.turn) }
   // 戦闘終了条件：そのターン終了時、フィールド上の味方が全員倒れていた側が敗北。
   let lose0 = game.planned[0].every(uid => game.players[0].team.find(h => h.uid === uid)?.hp <= 0), lose1 = game.planned[1].every(uid => game.players[1].team.find(h => h.uid === uid)?.hp <= 0); if (lose0 || lose1) { finish(lose0 && lose1 ? -1 : lose0 ? 1 : 0); return }
   beginRound(); render()
