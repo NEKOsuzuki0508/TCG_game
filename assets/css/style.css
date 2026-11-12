@@ -3092,3 +3092,10 @@ a {
 .exceed-modes button { flex: 1 1 45%; min-width: 220px; }
 .exceed-modes button b, .exceed-modes button small { display: block; }
 .exceed-modes button small { margin-top: 5px; color: #b4c8d8; line-height: 1.5; }
+
+
+/* 補助カードの使用宣言 */
+.support-declaration-modal { width: min(760px, 100%); }
+.support-declaration-modal .exceed-options button { max-width: 100%; }
+.support-declaration-modal .exceed-options button small { display: block; margin-top: 5px; color: #b4c8d8; line-height: 1.5; }
+.support-declaration-modal .primary-btn:disabled { opacity: .4; cursor: not-allowed; }
