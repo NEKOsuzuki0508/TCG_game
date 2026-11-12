@@ -548,7 +548,8 @@ function activateExceedCard(source, targetUid, mode) {
     target.hp = target.maxHp; target.exceedLiberate = { turn: game.turn, stats: stats };
     log('超過機構：' + target.name + 'に賦活醒（リベレト）。HP全回復、現在の実効ステータスを2倍');
   }
-  finishExceedPrompt();
+  game.exceedPrompt = null;
+  if (!advanceExceedPrompt()) resolveBeginTurn(); else { render(); persist(); }
 }
 function resolveBeginTurn() {
   if(typeof enemy1100TurnStart==='function')enemy1100TurnStart(); if(typeof challenge2TurnStart==='function')challenge2TurnStart();
