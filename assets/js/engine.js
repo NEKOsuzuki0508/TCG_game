@@ -509,7 +509,7 @@ function advanceSupportPrompt() {
   if (!game || !game.supportFlow) return false;
   while (game.supportFlow.index < game.supportFlow.sides.length) {
     const side = game.supportFlow.sides[game.supportFlow.index], p = game.players[side];
-    if (p.assistUsed || !p.hand.some(c => SUPPORTS.includes(c) && c !== EXCEED_CARD)) { game.supportFlow.index++; continue; }
+    if (p.assistUsed) { game.supportFlow.index++; continue; }
     game.supportPrompt = { side, cardName: null, targetUid: null, ready: !(game.mode === 'local' && side === 1) };
     log((side ? '赤' : '青') + '側：補助カードの使用宣言');
     render(); persist(); return true;
